@@ -6,7 +6,7 @@ namespace Apps.Magento.Utils;
 
 public static class CredentialsExtensions
 {
-    public static Uri GetUrl(this IEnumerable<AuthenticationCredentialsProvider> creds)
+    public static string GetUrl(this IEnumerable<AuthenticationCredentialsProvider> creds)
     {
         var url = creds.Get(CredsNames.BaseUrl).Value;
         if(url.EndsWith("/"))
@@ -14,6 +14,6 @@ public static class CredentialsExtensions
             url = url.Substring(0, url.Length - 1);
         }
         
-        return new Uri(url);
+        return url;
     }
 }

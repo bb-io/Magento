@@ -1,4 +1,5 @@
 using Apps.Magento.Constants;
+using Apps.Magento.Models.Dtos;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Utils.RestSharp;
@@ -8,7 +9,7 @@ using RestSharp;
 namespace Apps.Magento.Api;
 
 public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> creds)
-    : BlackBirdRestClient(new RestClientOptions { BaseUrl = creds.GetUrl(), ThrowOnAnyError = false })
+    : BlackBirdRestClient(new RestClientOptions { BaseUrl = new Uri(creds.GetUrl()), ThrowOnAnyError = false })
 {
     protected override JsonSerializerSettings JsonSettings => JsonConfig.JsonSettings;
 
@@ -19,7 +20,15 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> creds)
 
     private Exception ConfigureException(RestResponse response)
     {
-        var errorMessage = $"Status code: {response.StatusCode}, Content: {response.Content}";
-        return new Exception(errorMessage);
+        try
+        {
+            var errorDto = JsonConvert.DeserializeObject<ErrorDto>(response.Content!)!;
+            return new Exception(errorDto.Message);
+        }
+        catch (Exception e)
+        {
+            var errorMessage = $"Status code: {response.StatusCode}, Content: {response.Content}";
+            return new Exception(errorMessage);
+        }
     }
 }
