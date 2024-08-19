@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Product>Magento</Product>
+        <Description>Magento is an open-source e-commerce platform written in PHP, offering an extensive suite of tools and features for building and managing online stores. It’s designed to be flexible and scalable, able to support businesses of all sizes – from small startups to large enterprises.</Description>
+        <Version>1.0.0</Version>
+        <AssemblyName>Apps.Magento</AssemblyName>
+        <RootNamespace>Apps.Magento</RootNamespace>
+        <PackageId>Apps.Magento</PackageId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.9.0-alpha1" />
+        <PackageReference Include="Blackbird.Applications.SDK.Extensions.FileManagement" Version="1.0.2-alpha2" />
+        <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.25" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\README.md">
+        <Link>README.md</Link>
+      </Content>
+    </ItemGroup>
+
+</Project>
