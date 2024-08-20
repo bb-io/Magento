@@ -1,12 +1,11 @@
 using Apps.Magento.Models.Dtos;
 using Blackbird.Applications.Sdk.Common;
 
-namespace Apps.Magento.Models.Responses.Products;
+namespace Apps.Magento.Models.Responses;
 
-public class GetAllProductsResponse
+public class PaginationResponse<T>
 {
-    [Display("Products")]
-    public List<ProductResponse> Items { get; set; } = new();
+    public virtual List<T> Items { get; set; } = new();
     
     [DefinitionIgnore]
     public SearchCriteriaDto SearchCriteria { get; set; } = new();

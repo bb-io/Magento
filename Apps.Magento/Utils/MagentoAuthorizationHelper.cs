@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Security.Cryptography;
+using System.Web;
 
 namespace Apps.Magento.Utils;
 
@@ -17,20 +18,28 @@ public static class MagentoAuthorizationHelper
             { "oauth_token", oauthToken }
         };
 
-        string oauthSignature = GenerateOauthSignature(httpMethod, new Uri(url), oauthParams, consumerSecret, tokenSecret);
-
+        var oauthSignature = GenerateOauthSignature(httpMethod, new Uri(url), oauthParams, consumerSecret, tokenSecret);
         var authorizationHeader = new StringBuilder("OAuth ");
         foreach (var param in oauthParams)
         {
             authorizationHeader.AppendFormat("{0}=\"{1}\", ", param.Key, Uri.EscapeDataString(param.Value));
         }
-        
         authorizationHeader.AppendFormat("oauth_signature=\"{0}\"", Uri.EscapeDataString(oauthSignature));
+
         return authorizationHeader.ToString();
     }
     
     private static string GenerateOauthSignature(string httpMethod, Uri uri, Dictionary<string, string> oauthParams, string consumerSecret, string tokenSecret)
     {
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        foreach (var key in queryParams.AllKeys)
+        {
+            if (key is not null)
+            {
+                oauthParams.Add(key, queryParams[key]);
+            }
+        }
+
         var sortedParams = new SortedDictionary<string, string>(oauthParams);
         var parameterString = new StringBuilder();
         foreach (var param in sortedParams)

@@ -10,6 +10,10 @@ namespace Apps.Magento.Api;
 public class ApiRequest(string resource, Method method, IEnumerable<AuthenticationCredentialsProvider> creds)
     : BlackBirdRestRequest(resource, method, creds)
 {
+    private readonly string? _query = resource.Contains("?") 
+        ? resource.Substring(resource.IndexOf("?", StringComparison.Ordinal) + 1) 
+        : null;
+
     protected override void AddAuth(IEnumerable<AuthenticationCredentialsProvider> creds)
     {
         var credentials = creds.ToList();
@@ -22,7 +26,13 @@ public class ApiRequest(string resource, Method method, IEnumerable<Authenticati
         var oauthNonce = MagentoAuthorizationHelper.GenerateNonce();
         var oauthTimestamp = MagentoAuthorizationHelper.GenerateTimestamp();
 
-        var authorizationHeader = MagentoAuthorizationHelper.CreateAuthorizationHeader(Method.ToString(), baseUrl + Resource, oauthConsumerKey, oauthNonce,
+        var url = baseUrl + Resource;
+        if(_query != null)
+        {
+            url += "?" + _query;
+        }
+        
+        var authorizationHeader = MagentoAuthorizationHelper.CreateAuthorizationHeader(Method.ToString(), url, oauthConsumerKey, oauthNonce,
             oauthTimestamp, oauthToken, consumerSecret, tokenSecret);
         
         this.AddHeader("Authorization", authorizationHeader);

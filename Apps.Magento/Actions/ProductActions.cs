@@ -11,8 +11,8 @@ namespace Apps.Magento.Actions;
 public class ProductActions(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
     [Action("Get all products", Description = "Get all products")]
-    public async Task<GetAllProductsResponse> GetAllProductsAsync()
+    public async Task<ProductsResponse> GetAllProductsAsync()
     {
-        return await Client.ExecuteWithErrorHandling<GetAllProductsResponse>(new ApiRequest("/rest/V1/products?searchCriteria", Method.Get, Creds));
+        return await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest("/rest/V1/products?searchCriteria", Method.Get, Creds));
     }
 }
