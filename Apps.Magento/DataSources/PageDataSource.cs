@@ -14,7 +14,7 @@ public class PageDataSource(InvocationContext invocationContext) : AppInvocable(
         var pages = await actions.GetAllPagesAsync(new FilterPageRequest()
         {
             ConditionType = "like",
-            Title = context.SearchString
+            Title = $"%{context.SearchString}%"
         });
         
         return pages.Items

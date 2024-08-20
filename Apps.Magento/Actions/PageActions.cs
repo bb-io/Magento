@@ -25,7 +25,7 @@ public class PageActions(InvocationContext invocationContext) : AppInvocable(inv
         return await Client.ExecuteWithErrorHandling<PagesResponse>(request);
     }
 
-    [Action("Get page by ID", Description = "Get page by ID")]
+    [Action("Get page", Description = "Get page by specified ID")]
     public async Task<PageResponse> GetPageByIdAsync([ActionParameter] PageIdentifier identifier)
     {
         return await Client.ExecuteWithErrorHandling<PageResponse>(
