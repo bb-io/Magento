@@ -2,7 +2,7 @@ using Apps.Magento.DataSources.Static;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dictionaries;
 
-namespace Apps.Magento.Models.Responses.Pages;
+namespace Apps.Magento.Models.Requests.Pages;
 
 public class FilterPageRequest
 {
