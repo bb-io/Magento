@@ -7,7 +7,7 @@ namespace Apps.Magento.Models.Requests.Pages;
 
 public class UpdatePageFromHtmlRequest
 {
-    [Display("Page ID"), DataSource(typeof(PageDataSource))]
+    [Display("Page ID", Description = "The unique identifier of the page."), DataSource(typeof(PageDataSource))]
     public string? PageId { get; set; }
  
     public FileReference File { get; set; } = new();

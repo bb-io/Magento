@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Reflection;
-using System.Text;
 using Apps.Magento.Api;
 using Apps.Magento.Constants;
 using Apps.Magento.Invocables;
@@ -43,7 +41,7 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     {
         var page = await GetPageByIdAsync(identifier);
         var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Page, identifier.PageId, page.Content);
-        return await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{identifier.PageId}.html");
+        return await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{page.Identifier}.html");
     }
 
     [Action("Create page", Description = "Create a new page")]
@@ -75,14 +73,7 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     public async Task<PageResponse> UpdatePageByIdAsync([ActionParameter] PageIdentifier identifier,
         [ActionParameter] UpdatePageRequest pageRequest)
     {
-        var allPropertiesNull = pageRequest.GetType()
-            .GetProperties()
-            .All(prop => prop.GetValue(pageRequest) == null);
-
-        if (allPropertiesNull)
-        {
-            throw new ArgumentException("At least one property must be specified to update the page.");
-        }
+        ValidateRequestIfAllPropertiesAreNullThrowException(pageRequest);        
         
         var page = await GetPageByIdAsync(identifier);
         page.Identifier = pageRequest.Identifier ?? page.Identifier;
@@ -97,11 +88,7 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
         page.Active = pageRequest.Active ?? page.Active;
 
         var request = new ApiRequest($"/rest/default/V1/cmsPage/{identifier.PageId}", Method.Put, Creds)
-            .AddBody(new
-            {
-                page
-            });
-
+            .AddBody(new { page });
         return await Client.ExecuteWithErrorHandling<PageResponse>(request);
     }
     
@@ -128,36 +115,5 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     {
         await Client.ExecuteWithErrorHandling(
             new ApiRequest($"/rest/default/V1/cmsPage/{identifier.PageId}", Method.Delete, Creds));
-    }
-
-    private void ValidateFilterRequest(FilterPageRequest filterRequest)
-    {
-        var properties = filterRequest.GetType().GetProperties();
-        var filledProperties = properties.Where(p => p.GetValue(filterRequest) != null).ToList();
-
-        if (filledProperties.Count > 0 && filledProperties.Count < properties.Length)
-        {
-            var missingProperties = properties.Except(filledProperties)
-                .Select(p => p.GetCustomAttribute<DisplayAttribute>()?.Name ?? p.Name)
-                .ToArray();
-
-            throw new ArgumentException($"Missing required filter properties: {string.Join(", ", missingProperties)}");
-        }
-    }
-
-    private string BuildQueryString(FilterPageRequest filterRequest)
-    {
-        var queryString = new StringBuilder();
-        if (!string.IsNullOrEmpty(filterRequest.Title) &&
-            !string.IsNullOrEmpty(filterRequest.ConditionType))
-        {
-            queryString.Append($"[filterGroups][0][filters][0][field]={Uri.EscapeDataString("title")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][0][value]={Uri.EscapeDataString(filterRequest.Title)}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][0][conditionType]={Uri.EscapeDataString(filterRequest.ConditionType)}");
-        }
-
-        return queryString.ToString();
     }
 }

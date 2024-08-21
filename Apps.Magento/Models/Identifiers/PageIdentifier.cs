@@ -6,6 +6,6 @@ namespace Apps.Magento.Models.Identifiers;
 
 public class PageIdentifier
 {
-    [Display("Page ID"), DataSource(typeof(PageDataSource))]
+    [Display("Page ID", Description = "The unique identifier of the page."), DataSource(typeof(PageDataSource))]
     public string PageId { get; set; } = string.Empty;
 }
