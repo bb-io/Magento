@@ -1,5 +1,6 @@
 using Apps.Magento.Actions;
 using Apps.Magento.Invocables;
+using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Requests.Pages;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -11,7 +12,7 @@ public class PageDataSource(InvocationContext invocationContext) : AppInvocable(
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         var actions = new PageActions(invocationContext, null!);
-        var pages = await actions.GetAllPagesAsync(new FilterPageRequest()
+        var pages = await actions.GetAllPagesAsync(new StoreViewOptionalIdentifier(), new FilterPageRequest()
         {
             ConditionType = "like",
             Title = $"%{context.SearchString}%"

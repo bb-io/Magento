@@ -19,36 +19,40 @@ namespace Apps.Magento.Actions;
 public class BlockActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : AppInvocable(invocationContext)
 {
     [Action("Get all blocks", Description = "Get all blocks")]
-    public async Task<BlocksResponse> GetAllBlocksAsync([ActionParameter] FilterBlockRequest filterRequest)
+    public async Task<BlocksResponse> GetAllBlocksAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [ActionParameter] FilterBlockRequest filterRequest)
     {
         ValidateFilterRequest(filterRequest);
         var queryString = BuildQueryString(filterRequest);
-        var requestUrl = $"/rest/default/V1/cmsBlock/search?searchCriteria{queryString}";
+        var requestUrl = $"/rest/{storeViewIdentifier}/V1/cmsBlock/search?searchCriteria{queryString}";
 
         var request = new ApiRequest(requestUrl, Method.Get, Creds);
         return await Client.ExecuteWithErrorHandling<BlocksResponse>(request);
     }
     
     [Action("Get block", Description = "Get block by specified ID")]
-    public async Task<BlockResponse> GetBlockAsync([ActionParameter] BlockIdentifier identifier)
+    public async Task<BlockResponse> GetBlockAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
+        [ActionParameter] BlockIdentifier identifier)
     {
-        var requestUrl = $"/rest/default/V1/cmsBlock/{identifier.BlockId}";
+        var requestUrl = $"/rest/{storeViewIdentifier}/V1/cmsBlock/{identifier.BlockId}";
         var request = new ApiRequest(requestUrl, Method.Get, Creds);
         return await Client.ExecuteWithErrorHandling<BlockResponse>(request);
     }
     
     [Action("Get block as HTML", Description = "Get block by specified ID as HTML")]
-    public async Task<FileReference> GetBlockAsHtmlAsync([ActionParameter] BlockIdentifier identifier)
+    public async Task<FileReference> GetBlockAsHtmlAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [ActionParameter] BlockIdentifier identifier)
     {
-        var block = await GetBlockAsync(identifier);
+        var block = await GetBlockAsync(storeViewIdentifier, identifier);
         var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Block, identifier.BlockId, block.Content);
         return await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{block.Identifier}.html");
     }
     
     [Action("Create block", Description = "Create block with specified data")]
-    public async Task<BlockResponse> CreateBlockAsync([ActionParameter] CreateBlockRequest createBlockRequest)
+    public async Task<BlockResponse> CreateBlockAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
+        [ActionParameter] CreateBlockRequest createBlockRequest)
     {
-        var requestUrl = $"/rest/default/V1/cmsBlock";
+        var requestUrl = $"/rest/{storeViewIdentifier}/V1/cmsBlock";
         
         var body = new
         {
@@ -68,24 +72,26 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     }
     
     [Action("Update block", Description = "Update block with specified data")]
-    public async Task<BlockResponse> UpdateBlockAsync([ActionParameter] BlockIdentifier identifier, 
+    public async Task<BlockResponse> UpdateBlockAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
+        [ActionParameter] BlockIdentifier identifier, 
         [ActionParameter] UpdateBlockRequest updateBlockRequest)
     {
         ValidateRequestIfAllPropertiesAreNullThrowException(updateBlockRequest);
         
-        var block = await GetBlockAsync(identifier);
+        var block = await GetBlockAsync(storeViewIdentifier, identifier);
         block.Identifier = updateBlockRequest.Identifier ?? block.Identifier;
         block.Title = updateBlockRequest.Title ?? block.Title;
         block.Content = updateBlockRequest.Content ?? block.Content;
         block.Active = updateBlockRequest.Active ?? block.Active;
         
-        var request = new ApiRequest($"/rest/default/V1/cmsBlock/{identifier.BlockId}", Method.Put, Creds)
+        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/cmsBlock/{identifier.BlockId}", Method.Put, Creds)
             .AddBody(new { block });
         return await Client.ExecuteWithErrorHandling<BlockResponse>(request);
     }
     
     [Action("Update block from HTML", Description = "Update block with specified data from HTML")]
-    public async Task<BlockResponse> UpdateBlockFromHtmlAsync([ActionParameter] UpdateBlockFromHtmlRequest request)
+    public async Task<BlockResponse> UpdateBlockFromHtmlAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
+        [ActionParameter] UpdateBlockFromHtmlRequest request)
     {
         var htmlStream = await fileManagementClient.DownloadAsync(request.File);
         var html = await new StreamReader(htmlStream).ReadToEndAsync();
@@ -93,7 +99,7 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
         
         var blockId = request.BlockId ?? htmlModel.ResourceId ?? throw new ArgumentException("Couldn't find block ID in the HTML document. " +
             "Please specify it manually in the optional input.");
-        return await UpdateBlockAsync(new BlockIdentifier()
+        return await UpdateBlockAsync(storeViewIdentifier, new BlockIdentifier()
         {
             BlockId = blockId
         }, new UpdateBlockRequest
@@ -103,9 +109,10 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     }
     
     [Action("Delete block", Description = "Delete block by specified ID")]
-    public async Task DeleteBlockAsync([ActionParameter] BlockIdentifier identifier)
+    public async Task DeleteBlockAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,  
+        [ActionParameter] BlockIdentifier identifier)
     {
-        var requestUrl = $"/rest/default/V1/cmsBlock/{identifier.BlockId}";
+        var requestUrl = $"/rest/{storeViewIdentifier}/V1/cmsBlock/{identifier.BlockId}";
         var request = new ApiRequest(requestUrl, Method.Delete, Creds);
         await Client.ExecuteWithErrorHandling(request);
     }

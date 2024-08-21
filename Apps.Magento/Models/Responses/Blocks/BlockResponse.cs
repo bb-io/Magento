@@ -1,4 +1,6 @@
+using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common;
+using Newtonsoft.Json;
 
 namespace Apps.Magento.Models.Responses.Blocks;
 
@@ -16,10 +18,10 @@ public class BlockResponse
     [Display("Content")]
     public string Content { get; set; } = string.Empty;
     
-    [Display("Creation time")]
+    [Display("Creation time"), JsonConverter(typeof(CustomDateTimeConverter))]
     public DateTime CreationTime { get; set; }
     
-    [Display("Update time")]
+    [Display("Update time"), JsonConverter(typeof(CustomDateTimeConverter))]
     public DateTime UpdateTime { get; set; }
     
     [Display("Active")]
