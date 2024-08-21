@@ -26,7 +26,7 @@ public class UpdatePageRequest
     public string? ContentHeading { get; set; }
 
     [Display("Content")] 
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 
     [Display("Sort order")] 
     public string? SortOrder { get; set; } 

@@ -36,7 +36,7 @@ public static class MagentoAuthorizationHelper
         {
             if (key is not null)
             {
-                oauthParams.Add(key, queryParams[key]);
+                oauthParams.Add(key, queryParams[key]!);
             }
         }
 

@@ -25,7 +25,7 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> creds)
             var errorDto = JsonConvert.DeserializeObject<ErrorDto>(response.Content!)!;
             return new Exception(errorDto.Message);
         }
-        catch (Exception e)
+        catch (Exception)
         {
             var errorMessage = $"Status code: {response.StatusCode}, Content: {response.Content}";
             return new Exception(errorMessage);

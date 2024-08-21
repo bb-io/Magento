@@ -11,7 +11,7 @@ public class BlockDataSource(InvocationContext invocationContext) : AppInvocable
 {
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var actions = new BlockActions(invocationContext, null!);
+        var actions = new BlockActions(InvocationContext, null!);
         var pages = await actions.GetAllBlocksAsync(new StoreViewOptionalIdentifier(), new FilterBlockRequest
         {
             ConditionType = "like",

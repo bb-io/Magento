@@ -1,18 +1,105 @@
 using Apps.Magento.Api;
 using Apps.Magento.Invocables;
+using Apps.Magento.Models.Identifiers;
+using Apps.Magento.Models.Requests.Products;
 using Apps.Magento.Models.Responses.Products;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using RestSharp;
 
 namespace Apps.Magento.Actions;
 
 [ActionList]
-public class ProductActions(InvocationContext invocationContext) : AppInvocable(invocationContext)
+public class ProductActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
+    : AppInvocable(invocationContext)
 {
     [Action("Get all products", Description = "Get all products")]
-    public async Task<ProductsResponse> GetAllProductsAsync()
+    public async Task<ProductsResponse> GetAllProductsAsync(
+        [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [ActionParameter] FilterProductRequest filterRequest)
     {
-        return await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest("/rest/V1/products?searchCriteria", Method.Get, Creds));
+        ValidateFilterRequest(filterRequest);
+        var queryString = BuildQueryString(filterRequest);
+        var requestUrl = $"/rest/{storeViewIdentifier}/V1/products?searchCriteria{queryString}";
+        return await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
+    }
+
+    [Action("Get product", Description = "Get product by specified SKU")]
+    public async Task<ProductResponse> GetProductBySkuAsync(
+        [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [ActionParameter] ProductIdentifier identifier)
+    {
+        return await Client.ExecuteWithErrorHandling<ProductResponse>(
+            new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Get, Creds));
+    }
+
+    [Action("Create product", Description = "Create product with specified data")]
+    public async Task<ProductResponse> CreateProductAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [ActionParameter] CreateProductRequest createProductRequest)
+    {
+        var body = new
+        {
+            product = new
+            {
+                sku = createProductRequest.Sku,
+                name = createProductRequest.Name,
+                attribute_set_id = int.Parse(createProductRequest.AttributeSetId),
+                price = createProductRequest.Price,
+                status = 1,
+                visibility = 1,
+                type_id = createProductRequest.TypeId,
+                weight = createProductRequest.Weight,
+                extension_attributes = new
+                {
+                    category_links = new List<object>()
+                },
+                custom_attributes = new List<object>()
+            }
+        };
+        
+        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/products", Method.Post, Creds)
+            .AddBody(body);
+        return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
+    }
+    
+    [Action("Update product", Description = "Update product by specified SKU")]
+    public async Task<ProductResponse> UpdateProductBySkuAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [ActionParameter] ProductIdentifier identifier, 
+        [ActionParameter] UpdateProductRequest updateProductRequest)
+    {
+        var product = await GetProductBySkuAsync(storeViewIdentifier, identifier);
+        var body = new
+        {
+            product = new
+            {
+                sku = product.Sku,
+                name = updateProductRequest.Name ?? product.Name,
+                attribute_set_id = int.Parse(updateProductRequest.AttributeSetId ?? product.AttributeSetId),
+                price = updateProductRequest.Price ?? product.Price,
+                status = product.Status,
+                visibility = product.Visibility,
+                type_id = updateProductRequest.TypeId ?? product.TypeId,
+                weight = updateProductRequest.Weight ?? product.Weight,
+                extension_attributes = new
+                {
+                    category_links = new List<object>()
+                },
+                custom_attributes = new List<object>()
+            }
+        };
+        
+        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put, Creds)
+            .AddBody(body);
+        return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
+    }
+
+    [Action("Delete product", Description = "Delete product by specified SKU")]
+    public async Task DeleteProductBySkuAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [ActionParameter] ProductIdentifier identifier)
+    {
+        await Client.ExecuteWithErrorHandling(
+            new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Delete, Creds));
     }
 }

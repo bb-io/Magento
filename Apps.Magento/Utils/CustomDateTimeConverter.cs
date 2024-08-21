@@ -14,7 +14,7 @@ public class CustomDateTimeConverter : JsonConverter<DateTime>
             return DateTime.MinValue;
         }
 
-        var dateStr = reader.Value.ToString();
+        var dateStr = reader.Value?.ToString() ?? string.Empty;
 
         if (string.IsNullOrEmpty(dateStr) || dateStr == "0000-00-00 00:00:00")
         {

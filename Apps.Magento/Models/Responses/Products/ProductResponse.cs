@@ -1,23 +1,25 @@
+using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common;
+using Newtonsoft.Json;
 
 namespace Apps.Magento.Models.Responses.Products;
 
 public class ProductResponse
 {
     [Display("Product ID")]
-    public int Id { get; set; }
+    public string Id { get; set; } = string.Empty;
     
     [Display("SKU")]
-    public string Sku { get; set; }
+    public string Sku { get; set; } = string.Empty;
     
     [Display("Product name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
     
     [Display("Attribute set ID")]
-    public int AttributeSetId { get; set; }
+    public string AttributeSetId { get; set; } = string.Empty;
     
     [Display("Price")]
-    public decimal Price { get; set; }
+    public double Price { get; set; }
     
     [Display("Status")]
     public int Status { get; set; }
@@ -28,14 +30,14 @@ public class ProductResponse
     [Display("Type ID")]
     public string TypeId { get; set; } = string.Empty;
     
-    [Display("Created at")]
+    [Display("Created at"), JsonConverter(typeof(CustomDateTimeConverter))]
     public DateTime CreatedAt { get; set; }
     
-    [Display("Updated at")]
+    [Display("Updated at"), JsonConverter(typeof(CustomDateTimeConverter))]
     public DateTime UpdatedAt { get; set; }
     
     [Display("Weight")]
-    public decimal Weight { get; set; }
+    public double Weight { get; set; }
     
     [DefinitionIgnore]
     public ExtensionAttributes ExtensionAttributes { get; set; } = new();
@@ -52,7 +54,7 @@ public class ProductResponse
     [DefinitionIgnore]
     public List<object> TierPrices { get; set; } = new();
     
-    [DefinitionIgnore]
+    [Display("Custom attributes")]
     public List<CustomAttribute> CustomAttributes { get; set; } = new();
 }
 
@@ -71,16 +73,16 @@ public class ExtensionAttributes
 public class ProductLink
 {
     [Display("SKU")]
-    public string Sku { get; set; }
+    public string Sku { get; set; } = string.Empty;
     
     [Display("Link type")]
-    public string LinkType { get; set; }
+    public string LinkType { get; set; } = string.Empty;
     
-    [Display("Linked product SKU")]
-    public string LinkedProductSku { get; set; }
+    [Display("Linked product SKU")] 
+    public string LinkedProductSku { get; set; } = string.Empty;
     
     [Display("Linked product type")]
-    public string LinkedProductType { get; set; }
+    public string LinkedProductType { get; set; } = string.Empty;
     
     [Display("Position")]
     public int Position { get; set; }
@@ -88,17 +90,17 @@ public class ProductLink
 
 public class Option
 {
-    [Display("Product SKU")]
-    public string ProductSku { get; set; }
+    [Display("Product SKU")] 
+    public string ProductSku { get; set; } = string.Empty;
     
     [Display("Option ID")]
     public int OptionId { get; set; }
     
     [Display("Title")]
-    public string Title { get; set; }
+    public string Title { get; set; } = string.Empty;
     
     [Display("Type")]
-    public string Type { get; set; }
+    public string Type { get; set; } = string.Empty;
     
     [Display("Sort order")]
     public int SortOrder { get; set; }
@@ -107,10 +109,10 @@ public class Option
     public bool IsRequire { get; set; }
     
     [Display("SKU")]
-    public string Sku { get; set; }
+    public string Sku { get; set; } = string.Empty;
     
     [Display("Max characters")]
-    public int MaxCharacters { get; set; }
+    public int MaxCharacters { get; set; } 
     
     [Display("Image size X")]
     public int ImageSizeX { get; set; }
@@ -125,7 +127,7 @@ public class Option
 public class Value
 {
     [Display("Title")]
-    public string Title { get; set; }
+    public string Title { get; set; } = string.Empty;
     
     [Display("Sort order")]
     public int SortOrder { get; set; }
@@ -134,10 +136,10 @@ public class Value
     public decimal Price { get; set; }
     
     [Display("Price type")]
-    public string PriceType { get; set; }
-    
+    public string PriceType { get; set; } = string.Empty;
+     
     [Display("SKU")]
-    public string Sku { get; set; }
+    public string Sku { get; set; } = string.Empty;
     
     [Display("Option type ID")]
     public int OptionTypeId { get; set; }
@@ -146,10 +148,10 @@ public class Value
 public class MediaGalleryEntry
 {
     [Display("Media type")]
-    public string MediaType { get; set; }
+    public string MediaType { get; set; } = string.Empty;
     
     [Display("Label")]
-    public string Label { get; set; }
+    public string Label { get; set; } = string.Empty;
     
     [Display("Position")]
     public int Position { get; set; }
@@ -161,7 +163,7 @@ public class MediaGalleryEntry
     public List<string> Types { get; set; } = new();
     
     [Display("File")]
-    public string File { get; set; }
+    public string File { get; set; } = string.Empty;
     
     [Display("Content")]
     public Content Content { get; set; } = new();
@@ -170,22 +172,22 @@ public class MediaGalleryEntry
 public class Content
 {
     [Display("Base64 encoded data")]
-    public string Base64EncodedData { get; set; }
+    public string Base64EncodedData { get; set; } = string.Empty;
     
     [Display("Type")]
-    public string Type { get; set; }
+    public string Type { get; set; } = string.Empty;
     
     [Display("Name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
 
 public class CustomAttribute
 {
     [Display("Attribute code")]
-    public string AttributeCode { get; set; }
-    
-    [Display("Value")]
-    public object Value { get; set; }
+    public string AttributeCode { get; set; } = string.Empty;
+     
+    [Display("Value"), JsonConverter(typeof(StringOrUndefinedConverter))]
+    public string Value { get; set; } = string.Empty;
 }
 
 public class CategoryLink
@@ -194,7 +196,7 @@ public class CategoryLink
     public int Position { get; set; }
     
     [Display("Category ID")]
-    public string CategoryId { get; set; }
+    public string CategoryId { get; set; } = string.Empty;
 }
 
 public class BundleProductOption
@@ -203,19 +205,19 @@ public class BundleProductOption
     public int OptionId { get; set; }
     
     [Display("Title")]
-    public string Title { get; set; }
+    public string Title { get; set; } = string.Empty;
     
     [Display("Required")]
     public bool Required { get; set; }
     
     [Display("Type")]
-    public string Type { get; set; }
+    public string Type { get; set; } = string.Empty;
     
     [Display("Position")]
-    public int Position { get; set; }
+    public int Position { get; set; } 
     
     [Display("SKU")]
-    public string Sku { get; set; }
+    public string Sku { get; set; } = string.Empty;
     
     [DefinitionIgnore]
     public List<ProductLink> ProductLinks { get; set; } = new();
