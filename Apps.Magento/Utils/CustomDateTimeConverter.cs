@@ -25,19 +25,17 @@ public class CustomDateTimeConverter : JsonConverter<DateTime>
         {
             return date;
         }
-
-        throw new JsonReaderException($"Invalid date format: {dateStr}");
+        
+        if (DateTime.TryParse(dateStr, out DateTime result))
+        {
+            return result;
+        }
+        
+        return DateTime.MinValue;
     }
 
     public override void WriteJson(JsonWriter writer, DateTime value, JsonSerializer serializer)
     {
-        if (value != DateTime.MinValue)
-        {
-            writer.WriteValue(value.ToString("yyyy-MM-dd HH:mm:ss"));
-        }
-        else
-        {
-            writer.WriteNull();
-        }
+        writer.WriteValue(value.ToString("yyyy-MM-dd HH:mm:ss"));
     }
 }
