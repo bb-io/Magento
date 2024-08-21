@@ -1,6 +1,8 @@
+using System.Text;
 using Apps.Magento.Api;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Identifiers;
+using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Requests.Products;
 using Apps.Magento.Models.Responses.Products;
 using Blackbird.Applications.Sdk.Common;
@@ -21,7 +23,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] FilterProductRequest filterRequest)
     {
         ValidateFilterRequest(filterRequest);
-        var queryString = BuildQueryString(filterRequest);
+        var queryString = this.BuildQueryString(filterRequest);
         var requestUrl = $"/rest/{storeViewIdentifier}/V1/products?searchCriteria{queryString}";
         return await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
     }
@@ -101,5 +103,21 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
     {
         await Client.ExecuteWithErrorHandling(
             new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Delete, Creds));
+    }
+    
+    protected override string BuildQueryString(BaseFilterRequest filterRequest)
+    {
+        var queryString = new StringBuilder();
+        if (!string.IsNullOrEmpty(filterRequest.Title) &&
+            !string.IsNullOrEmpty(filterRequest.ConditionType))
+        {
+            queryString.Append($"[filterGroups][0][filters][0][field]={Uri.EscapeDataString("name")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][0][value]={Uri.EscapeDataString(filterRequest.Title)}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][0][conditionType]={Uri.EscapeDataString(filterRequest.ConditionType)}");
+        }
+
+        return queryString.ToString();
     }
 }
