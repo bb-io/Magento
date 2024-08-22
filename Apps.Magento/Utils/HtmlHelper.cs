@@ -31,14 +31,16 @@ public static class HtmlHelper
         return htmlBuilder.ToString();
     }
     
-    public static List<CustomAttribute> ParseCustomAttributesFromHtml(string html)
+    public static ProductModel ParseCustomAttributesFromHtml(string html)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
 
         var customAttributes = new List<CustomAttribute>();
+        var nameNode = doc.DocumentNode.SelectSingleNode("//h1");
+        var name = nameNode?.InnerHtml.Trim() ?? string.Empty;
+        
         var attributeNodes = doc.DocumentNode.SelectNodes("//div[@data-attribute-code]");
-
         if (attributeNodes != null)
         {
             foreach (var attributeNode in attributeNodes)
@@ -57,7 +59,7 @@ public static class HtmlHelper
             }
         }
 
-        return customAttributes;
+        return new ProductModel(name, customAttributes);
     } 
     
     public static Stream ConvertToHtml(string contentType, string resourceId, string content)

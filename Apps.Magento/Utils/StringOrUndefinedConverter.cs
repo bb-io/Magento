@@ -22,7 +22,7 @@ public class StringOrUndefinedConverter : JsonConverter<string>
                 {
                     stringItems.Add(item.ToString());
                 }
-                return string.Join(", ", stringItems);
+                return $"[{string.Join(", ", stringItems)}]";
             }
 
             return reader.Value?.ToString() ?? "undefined";
@@ -35,6 +35,24 @@ public class StringOrUndefinedConverter : JsonConverter<string>
 
     public override void WriteJson(JsonWriter writer, string? value, JsonSerializer serializer)
     {
-        writer.WriteValue(value);
+        if(value.Contains("[") && value.Contains("]"))
+        {
+            var items = value.Substring(1, value.Length - 2).Split(", ")
+                .Select(int.Parse)
+                .ToList();
+            
+            writer.WriteStartArray();
+            
+            foreach (var item in items)
+            {
+                writer.WriteValue(item);
+            }
+            
+            writer.WriteEndArray();
+        }
+        else
+        {
+            writer.WriteValue(value);
+        }
     }
 }

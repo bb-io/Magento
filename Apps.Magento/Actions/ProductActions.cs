@@ -137,13 +137,13 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         var html = await new StreamReader(htmlStream).ReadToEndAsync();
         var htmlModel = HtmlHelper.ConvertFromHtml(html);
         
-        var customAttributes = HtmlHelper.ParseCustomAttributesFromHtml(html);
+        var productModel = HtmlHelper.ParseCustomAttributesFromHtml(html);
         var productSku = updateProductAsHtmlRequest.ProductSku ?? htmlModel.ResourceId ??
             throw new ArgumentException(
                 "Couldn't find product SKU in the HTML document. Please specify it manually in the optional input.");
         
         var product = await GetProductBySkuAsync(storeViewIdentifier, new ProductIdentifier { Sku = productSku });
-        foreach (var customAttribute in customAttributes)
+        foreach (var customAttribute in productModel.CustomAttributes)
         {
             var existingAttribute =
                 product.CustomAttributes.FirstOrDefault(x => x.AttributeCode == customAttribute.AttributeCode);
@@ -162,7 +162,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             product = new
             {
                 sku = product.Sku,
-                name = product.Name,
+                name = productModel.Name ?? product.Name,
                 attribute_set_id = int.Parse(product.AttributeSetId),
                 price = product.Price,
                 status = product.Status,
