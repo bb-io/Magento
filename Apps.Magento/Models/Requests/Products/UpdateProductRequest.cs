@@ -19,4 +19,10 @@ public class UpdateProductRequest
     public string? TypeId { get; set; }
 
     public double? Weight { get; set; }
+
+    [Display("Custom attribute keys")]
+    public IEnumerable<string>? CustomAttributeKeys { get; set; }
+    
+    [Display("Custom attribute values")]
+    public IEnumerable<string>? CustomAttributeValues { get; set; }
 }

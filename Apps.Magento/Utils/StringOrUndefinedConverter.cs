@@ -5,7 +5,7 @@ namespace Apps.Magento.Utils;
 
 public class StringOrUndefinedConverter : JsonConverter<string>
 {
-    public override string ReadJson(JsonReader reader, Type objectType, string existingValue, bool hasExistingValue, JsonSerializer serializer)
+    public override string ReadJson(JsonReader reader, Type objectType, string? existingValue, bool hasExistingValue, JsonSerializer serializer)
     {
         try
         {
@@ -33,7 +33,7 @@ public class StringOrUndefinedConverter : JsonConverter<string>
         }
     }
 
-    public override void WriteJson(JsonWriter writer, string value, JsonSerializer serializer)
+    public override void WriteJson(JsonWriter writer, string? value, JsonSerializer serializer)
     {
         writer.WriteValue(value);
     }
