@@ -4,7 +4,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Product>Magento</Product>
+        <Product>Magento [Beta]</Product>
         <Description>Magento is the leading platform for open commerce innovation. It’s designed to be flexible and scalable, able to support businesses of all sizes – from small startups to large enterprises.</Description>
         <Version>1.0.0</Version>
         <AssemblyName>Apps.Magento</AssemblyName>
