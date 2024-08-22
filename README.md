@@ -4,7 +4,7 @@ Blackbird is the new automation backbone for the language technology industry. B
 
 ## Introduction
 
-Magento is an open-source e-commerce platform written in PHP, offering an extensive suite of tools and features for building and managing online stores. It’s designed to be flexible and scalable, able to support businesses of all sizes – from small startups to large enterprises.
+Magento is the leading platform for open commerce innovation. It’s designed to be flexible and scalable, able to support businesses of all sizes – from small startups to large enterprises.
 
 <!-- begin docs -->
 

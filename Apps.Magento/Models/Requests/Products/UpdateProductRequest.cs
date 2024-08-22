@@ -20,7 +20,7 @@ public class UpdateProductRequest
 
     public double? Weight { get; set; }
 
-    [Display("Custom attribute keys")]
+    [Display("Custom attribute keys"), DataSource(typeof(ProductAttributeDataSource))]
     public IEnumerable<string>? CustomAttributeKeys { get; set; }
     
     [Display("Custom attribute values")]

@@ -209,6 +209,60 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         await Client.ExecuteWithErrorHandling(
             new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Delete, Creds));
     }
+    
+    [Action("Add custom attribute", Description = "Add custom attribute to product by specified SKU")]
+    public async Task<ProductResponse> AddCustomAttributeToProductAsync(
+        [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [ActionParameter] ProductIdentifier identifier,
+        [ActionParameter] AddCustomAttributeRequest customAttributeDto)
+    {
+        var product = await GetProductBySkuAsync(storeViewIdentifier, identifier);
+        product.CustomAttributes.Add(new CustomAttribute
+        {
+            AttributeCode = customAttributeDto.AttributeCode,
+            Value = customAttributeDto.Value
+        });
+
+        var appropriateCustomAttributes = product.CustomAttributes.Select(x =>
+        {
+            if (IsArrayString(x.Value))
+            {
+                var list = JsonConvert.DeserializeObject<List<string>>(x.Value)!
+                    .ToList();
+                return new CustomAttributeDto(x.AttributeCode, list);
+            }
+        
+            return new CustomAttributeDto(x.AttributeCode, x.Value);
+        }).ToList();
+        
+        var body = new
+        {
+            product = new
+            {
+                sku = product.Sku,
+                name = product.Name,
+                attribute_set_id = int.Parse(product.AttributeSetId),
+                price = product.Price,
+                status = product.Status,
+                visibility = product.Visibility,
+                type_id = product.TypeId,
+                weight = product.Weight,
+                extension_attributes = new
+                {
+                    category_links = new List<object>()
+                },
+                custom_attributes = appropriateCustomAttributes.Select(x => new
+                {
+                    attribute_code = x.AttributeCode,
+                    value = x.Value
+                })
+            }
+        };
+
+        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put, Creds)
+            .AddBody(body);
+        return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
+    }
 
     protected override string BuildQueryString(BaseFilterRequest filterRequest)
     {

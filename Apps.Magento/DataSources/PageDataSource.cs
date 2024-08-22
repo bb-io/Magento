@@ -2,6 +2,7 @@ using Apps.Magento.Actions;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Requests.Pages;
+using Apps.Magento.Models.Responses.Pages;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
@@ -19,6 +20,17 @@ public class PageDataSource(InvocationContext invocationContext) : AppInvocable(
         });
         
         return pages.Items
-            .ToDictionary(x => x.Id, x => x.Title);
+            .ToDictionary(x => x.Id, x => GetPageName(x, pages.Items));
+    }
+    
+    private string GetPageName(PageResponse pageResponse, List<PageResponse> pages)
+    {
+        var pageWithSameName = pages.FirstOrDefault(x => x.Title == pageResponse.Title && x.Id != pageResponse.Id);
+        if (pageWithSameName == null)
+        {
+            return pageResponse.Title;
+        }
+        
+        return $"{pageResponse.Title} ({pageResponse.Identifier})";
     }
 }
