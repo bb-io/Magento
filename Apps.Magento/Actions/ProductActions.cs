@@ -2,6 +2,7 @@ using System.Text;
 using Apps.Magento.Api;
 using Apps.Magento.Constants;
 using Apps.Magento.Invocables;
+using Apps.Magento.Models.Dtos;
 using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Requests.Products;
@@ -136,18 +137,20 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
     {
         var htmlStream = await fileManagementClient.DownloadAsync(updateProductAsHtmlRequest.File);
         var html = await new StreamReader(htmlStream).ReadToEndAsync();
-        var htmlModel = HtmlHelper.ConvertFromHtml(html);
         
+        var htmlModel = HtmlHelper.ConvertFromHtml(html);
         var productModel = HtmlHelper.ParseCustomAttributesFromHtml(html);
+        
         var productSku = updateProductAsHtmlRequest.ProductSku ?? htmlModel.ResourceId ??
             throw new ArgumentException(
                 "Couldn't find product SKU in the HTML document. Please specify it manually in the optional input.");
-        
         var product = await GetProductBySkuAsync(storeViewIdentifier, new ProductIdentifier { Sku = productSku });
+        
         foreach (var customAttribute in productModel.CustomAttributes)
         {
             var existingAttribute =
                 product.CustomAttributes.FirstOrDefault(x => x.AttributeCode == customAttribute.AttributeCode);
+            
             if (existingAttribute != null)
             {
                 existingAttribute.Value = customAttribute.Value;
@@ -158,25 +161,18 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         }
 
-        foreach (var customAttribute in product.CustomAttributes)
+        var appropriateCustomAttributes = product.CustomAttributes.Select(x =>
         {
-            if (customAttribute.Value.StartsWith("[") && customAttribute.Value.EndsWith("]"))
+            if (IsArrayString(x.Value))
             {
-                customAttribute.Value = customAttribute.Value.Trim('[', ']');
-                var categoryIds = customAttribute.Value.Split(',').Select(id => id.Trim()).Select(int.Parse).ToArray();
-
-                var existingAttribute = new CustomAttribute
-                {
-                    AttributeCode = customAttribute.AttributeCode,
-                    Value = JsonConvert.SerializeObject(categoryIds)
-                };
-                
-                product.CustomAttributes.Remove(customAttribute);
-                product.CustomAttributes.Add(existingAttribute);
+                var list = JsonConvert.DeserializeObject<List<string>>(x.Value)!
+                    .ToList();
+                return new CustomAttributeDto(x.AttributeCode, list);
             }
-
-        }
-
+        
+            return new CustomAttributeDto(x.AttributeCode, x.Value);
+        }).ToList();
+        
         var body = new
         {
             product = new
@@ -193,7 +189,11 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
                 {
                     category_links = new List<object>()
                 },
-                custom_attributes = product.CustomAttributes
+                custom_attributes = appropriateCustomAttributes.Select(x => new
+                {
+                    attribute_code = x.AttributeCode,
+                    value = x.Value
+                })
             }
         };
 
@@ -224,5 +224,10 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         }
 
         return queryString.ToString();
+    }
+    
+    private bool IsArrayString(string value)
+    {
+        return value.StartsWith("[") && value.EndsWith("]");
     }
 }

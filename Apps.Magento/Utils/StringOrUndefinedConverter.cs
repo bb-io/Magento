@@ -35,23 +35,6 @@ public class StringOrUndefinedConverter : JsonConverter<string>
 
     public override void WriteJson(JsonWriter writer, string? value, JsonSerializer serializer)
     {
-        if (value.StartsWith("[") && value.EndsWith("]"))
-        {
-            var items = value.Substring(1, value.Length - 2)
-                .Split(", ")
-                .Select(item => int.TryParse(item, out var result) ? (object)result : item)
-                .ToList();
-
-            writer.WriteStartArray();
-            foreach (var item in items)
-            {
-                writer.WriteValue(item);
-            }
-            writer.WriteEndArray();
-        }
-        else
-        {
-            writer.WriteValue(value);
-        }
+        writer.WriteValue(value);
     }
 }
