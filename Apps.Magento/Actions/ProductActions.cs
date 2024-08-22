@@ -12,6 +12,7 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Newtonsoft.Json;
 using RestSharp;
 
 namespace Apps.Magento.Actions;
@@ -155,6 +156,25 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             {
                 product.CustomAttributes.Add(customAttribute);
             }
+        }
+
+        foreach (var customAttribute in product.CustomAttributes)
+        {
+            if (customAttribute.Value.StartsWith("[") && customAttribute.Value.EndsWith("]"))
+            {
+                customAttribute.Value = customAttribute.Value.Trim('[', ']');
+                var categoryIds = customAttribute.Value.Split(',').Select(id => id.Trim()).Select(int.Parse).ToArray();
+
+                var existingAttribute = new CustomAttribute
+                {
+                    AttributeCode = customAttribute.AttributeCode,
+                    Value = JsonConvert.SerializeObject(categoryIds)
+                };
+                
+                product.CustomAttributes.Remove(customAttribute);
+                product.CustomAttributes.Add(existingAttribute);
+            }
+
         }
 
         var body = new
