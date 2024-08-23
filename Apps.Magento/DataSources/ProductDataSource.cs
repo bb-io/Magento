@@ -14,8 +14,7 @@ public class ProductDataSource(InvocationContext invocationContext) : AppInvocab
         var actions = new ProductActions(InvocationContext, null!);
         var pages = await actions.GetAllProductsAsync(new StoreViewOptionalIdentifier(), new FilterProductRequest()
         {
-            ConditionType = "like",
-            Title = $"%{context.SearchString}%"
+            Title = context.SearchString
         });
         
         return pages.Items

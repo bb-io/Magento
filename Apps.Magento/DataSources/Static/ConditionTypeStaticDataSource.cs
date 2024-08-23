@@ -11,7 +11,9 @@ public class ConditionTypeStaticDataSource : IStaticDataSourceHandler
             { "eq", "Equal" },
             { "neq", "Not equal" },
             { "like", "Like" },
-            { "nlike", "Not like" }
+            { "nlike", "Not like" },
+            { "gt", "Greater than" },
+            { "lt", "Less than" }
         };
     }
 }

@@ -50,14 +50,35 @@ public class AppInvocable : BaseInvocable
     protected virtual string BuildQueryString(BaseFilterRequest filterRequest)
     {
         var queryString = new StringBuilder();
-        if (!string.IsNullOrEmpty(filterRequest.Title) &&
-            !string.IsNullOrEmpty(filterRequest.ConditionType))
+        var filterIndex = 0;
+
+        if (!string.IsNullOrEmpty(filterRequest.Title))
         {
-            queryString.Append($"[filterGroups][0][filters][0][field]={Uri.EscapeDataString("title")}");
+            queryString.Append($"[filterGroups][{filterIndex}][filters][0][field]={Uri.EscapeDataString("title")}");
             queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][0][value]={Uri.EscapeDataString(filterRequest.Title)}");
+                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][value]={Uri.EscapeDataString($"%{filterRequest.Title}%")}");
             queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][0][conditionType]={Uri.EscapeDataString(filterRequest.ConditionType)}");
+                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][conditionType]={Uri.EscapeDataString("like")}");
+
+            filterIndex += 1;
+        }
+        
+        if (filterRequest.CreatedAt.HasValue)
+        {
+            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("created_at")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
+        }
+
+        if (filterRequest.UpdatedAt.HasValue)
+        {
+            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("updated_at")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
         }
 
         return queryString.ToString();
