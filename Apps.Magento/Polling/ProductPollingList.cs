@@ -47,50 +47,36 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
         PollingEventRequest<DateMemory> request,
         [PollingEventParameter] StoreViewOptionalIdentifier storeViewIdentifier)
     {
-        try
+        if (request.Memory is null)
         {
-            if (request.Memory is null)
-            {
-                return new()
-                {
-                    FlyBird = false,
-                    Memory = new()
-                    {
-                        LastInteractionDate = DateTime.UtcNow
-                    }
-                };
-            }
-
-            var products = await GetProducts(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate },
-                storeViewIdentifier.ToString());
-            
-            await Logger.LogAsync(new
-            {
-                products.Items,
-                request.Memory
-            });
-            
             return new()
             {
-                FlyBird = products.Items.Any(),
-                Result = products,
+                FlyBird = false,
                 Memory = new()
                 {
                     LastInteractionDate = DateTime.UtcNow
                 }
             };
         }
-        catch (Exception e)
-        {
-            await Logger.LogAsync(new
-            {
-                e.Message,
-                e.StackTrace,
-                request.Memory
-            });
+
+        var products = await GetProducts(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate },
+            storeViewIdentifier.ToString());
             
-            throw;
-        }
+        await Logger.LogAsync(new
+        {
+            products.Items,
+            request.Memory
+        });
+            
+        return new()
+        {
+            FlyBird = products.Items.Any(),
+            Result = products,
+            Memory = new()
+            {
+                LastInteractionDate = DateTime.UtcNow
+            }
+        };
     }
     
     public async Task<ProductsResponse> GetProducts(BaseFilterRequest request, string storeView)
