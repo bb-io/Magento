@@ -62,6 +62,17 @@ Magento is the leading platform for open commerce innovation. It’s designed to
 - **Delete product** - Delete product by specified SKU.
 - **Add custom attribute** - Add custom attribute to product by specified SKU.
 
+## Events
+
+- **On products created** - Triggered when new products are created.
+- **On products updated** - Triggered when products are updated.
+- **On blocks created** - Triggered when new blocks are created.
+- **On blocks updated** - Triggered when blocks are updated.
+- **On pages created** - Triggered when new pages are created.
+- **On pages updated** - Triggered when pages are updated.
+
+Note, that these events are based on polling mechanism and are triggered periodically. The interval can be set in the bird editor. The interval should be between 5 minutes and 7 days.
+
 ## Feedback
 
 Do you want to use this app or do you have feedback on our implementation? Reach out to us using the [established channels](https://www.blackbird.io/) or create an issue.
