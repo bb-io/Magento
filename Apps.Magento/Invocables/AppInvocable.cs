@@ -70,6 +70,8 @@ public class AppInvocable : BaseInvocable
                 $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
             queryString.Append(
                 $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
+            
+            filterIndex += 1;
         }
 
         if (filterRequest.UpdatedAt.HasValue)
@@ -79,6 +81,8 @@ public class AppInvocable : BaseInvocable
                 $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
             queryString.Append(
                 $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
+            
+            filterIndex += 1;
         }
 
         return queryString.ToString();

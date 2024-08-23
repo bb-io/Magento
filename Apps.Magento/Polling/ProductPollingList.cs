@@ -47,28 +47,49 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
         PollingEventRequest<DateMemory> request,
         [PollingEventParameter] StoreViewOptionalIdentifier storeViewIdentifier)
     {
-        if (request.Memory is null)
+        try
         {
+            if (request.Memory is null)
+            {
+                return new()
+                {
+                    FlyBird = false,
+                    Memory = new()
+                    {
+                        LastInteractionDate = DateTime.UtcNow
+                    }
+                };
+            }
+
+            var products = await GetProducts(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate },
+                storeViewIdentifier.ToString());
+            
+            await Logger.LogAsync(new
+            {
+                products.Items
+            });
+            
             return new()
             {
-                FlyBird = false,
+                FlyBird = products.Items.Any(),
+                Result = products,
                 Memory = new()
                 {
                     LastInteractionDate = DateTime.UtcNow
                 }
             };
         }
-        
-        var products = await GetProducts(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate }, storeViewIdentifier.ToString());
-        return new()
+        catch (Exception e)
         {
-            FlyBird = products.Items.Any(),
-            Result = products,
-            Memory = new()
+            await Logger.LogAsync(new
             {
-                LastInteractionDate = DateTime.UtcNow
-            }
-        };
+                e.Message,
+                e.StackTrace,
+                request.Memory
+            });
+            
+            throw;
+        }
     }
     
     public async Task<ProductsResponse> GetProducts(BaseFilterRequest request, string storeView)
