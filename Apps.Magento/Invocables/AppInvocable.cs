@@ -31,21 +31,6 @@ public class AppInvocable : BaseInvocable
             throw new ArgumentException("At least one property must be specified to update the page.");
         }
     }
-    
-    protected virtual void ValidateFilterRequest(BaseFilterRequest filterRequest)
-    {
-        var properties = filterRequest.GetType().GetProperties();
-        var filledProperties = properties.Where(p => p.GetValue(filterRequest) != null).ToList();
-
-        if (filledProperties.Count > 0 && filledProperties.Count < properties.Length)
-        {
-            var missingProperties = properties.Except(filledProperties)
-                .Select(p => p.GetCustomAttribute<DisplayAttribute>()?.Name ?? p.Name)
-                .ToArray();
-
-            throw new ArgumentException($"Missing required filter properties: {string.Join(", ", missingProperties)}");
-        }
-    }
 
     protected virtual string BuildQueryString(BaseFilterRequest filterRequest)
     {

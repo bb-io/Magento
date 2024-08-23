@@ -27,8 +27,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
         [ActionParameter] FilterProductRequest filterRequest)
     {
-        ValidateFilterRequest(filterRequest);
-        var queryString = this.BuildQueryString(filterRequest);
+        var queryString = BuildQueryString(filterRequest);
         var requestUrl = $"/rest/{storeViewIdentifier}/V1/products?searchCriteria{queryString}";
         return await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
     }

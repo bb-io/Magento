@@ -22,7 +22,6 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     public async Task<BlocksResponse> GetAllBlocksAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
         [ActionParameter] FilterBlockRequest filterRequest)
     {
-        ValidateFilterRequest(filterRequest);
         var queryString = BuildQueryString(filterRequest);
         var requestUrl = $"/rest/{storeViewIdentifier}/V1/cmsBlock/search?searchCriteria{queryString}";
 
