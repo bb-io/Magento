@@ -15,8 +15,7 @@ public class BlockDataSource(InvocationContext invocationContext) : AppInvocable
         var actions = new BlockActions(InvocationContext, null!);
         var pages = await actions.GetAllBlocksAsync(new StoreViewOptionalIdentifier(), new FilterBlockRequest
         {
-            ConditionType = "like",
-            Title = $"%{context.SearchString}%"
+            Title = context.SearchString
         });
         
         return pages.Items

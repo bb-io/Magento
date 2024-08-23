@@ -31,33 +31,43 @@ public class AppInvocable : BaseInvocable
             throw new ArgumentException("At least one property must be specified to update the page.");
         }
     }
-    
-    protected virtual void ValidateFilterRequest(BaseFilterRequest filterRequest)
-    {
-        var properties = filterRequest.GetType().GetProperties();
-        var filledProperties = properties.Where(p => p.GetValue(filterRequest) != null).ToList();
-
-        if (filledProperties.Count > 0 && filledProperties.Count < properties.Length)
-        {
-            var missingProperties = properties.Except(filledProperties)
-                .Select(p => p.GetCustomAttribute<DisplayAttribute>()?.Name ?? p.Name)
-                .ToArray();
-
-            throw new ArgumentException($"Missing required filter properties: {string.Join(", ", missingProperties)}");
-        }
-    }
 
     protected virtual string BuildQueryString(BaseFilterRequest filterRequest)
     {
         var queryString = new StringBuilder();
-        if (!string.IsNullOrEmpty(filterRequest.Title) &&
-            !string.IsNullOrEmpty(filterRequest.ConditionType))
+        var filterIndex = 0;
+
+        if (!string.IsNullOrEmpty(filterRequest.Title))
         {
-            queryString.Append($"[filterGroups][0][filters][0][field]={Uri.EscapeDataString("title")}");
+            queryString.Append($"[filterGroups][{filterIndex}][filters][0][field]={Uri.EscapeDataString("title")}");
             queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][0][value]={Uri.EscapeDataString(filterRequest.Title)}");
+                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][value]={Uri.EscapeDataString($"%{filterRequest.Title}%")}");
             queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][0][conditionType]={Uri.EscapeDataString(filterRequest.ConditionType)}");
+                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][conditionType]={Uri.EscapeDataString("like")}");
+
+            filterIndex += 1;
+        }
+        
+        if (filterRequest.CreatedAt.HasValue)
+        {
+            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("created_at")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
+            
+            filterIndex += 1;
+        }
+
+        if (filterRequest.UpdatedAt.HasValue)
+        {
+            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("updated_at")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
+            
+            filterIndex += 1;
         }
 
         return queryString.ToString();

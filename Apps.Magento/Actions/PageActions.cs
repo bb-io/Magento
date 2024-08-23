@@ -22,7 +22,6 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     public async Task<PagesResponse> GetAllPagesAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
         [ActionParameter] FilterPageRequest filterRequest)
     {
-        ValidateFilterRequest(filterRequest);
         var queryString = BuildQueryString(filterRequest);
         var requestUrl = $"/rest/{storeViewIdentifier}/V1/cmsPage/search?searchCriteria{queryString}";
         var request = new ApiRequest(requestUrl, Method.Get, Creds);

@@ -27,8 +27,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
         [ActionParameter] FilterProductRequest filterRequest)
     {
-        ValidateFilterRequest(filterRequest);
-        var queryString = this.BuildQueryString(filterRequest);
+        var queryString = BuildQueryString(filterRequest);
         var requestUrl = $"/rest/{storeViewIdentifier}/V1/products?searchCriteria{queryString}";
         return await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
     }
@@ -267,14 +266,13 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
     protected override string BuildQueryString(BaseFilterRequest filterRequest)
     {
         var queryString = new StringBuilder();
-        if (!string.IsNullOrEmpty(filterRequest.Title) &&
-            !string.IsNullOrEmpty(filterRequest.ConditionType))
+        if (!string.IsNullOrEmpty(filterRequest.Title))
         {
             queryString.Append($"[filterGroups][0][filters][0][field]={Uri.EscapeDataString("name")}");
             queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][0][value]={Uri.EscapeDataString(filterRequest.Title)}");
+                $"&searchCriteria[filterGroups][0][filters][0][value]={Uri.EscapeDataString($"%{filterRequest.Title}%")}");
             queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][0][conditionType]={Uri.EscapeDataString(filterRequest.ConditionType)}");
+                $"&searchCriteria[filterGroups][0][filters][0][conditionType]={Uri.EscapeDataString("like")}");
         }
 
         return queryString.ToString();
