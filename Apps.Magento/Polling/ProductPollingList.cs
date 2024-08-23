@@ -11,7 +11,7 @@ using RestSharp;
 namespace Apps.Magento.Polling;
 
 [PollingEventList]
-public class PollingList(InvocationContext invocationContext) : AppInvocable(invocationContext)
+public class ProductPollingList(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
     [PollingEvent("On products created", "Triggered when new products are created")]
     public async Task<PollingEventResponse<DateMemory, ProductsResponse>> OnProductsCreated(
