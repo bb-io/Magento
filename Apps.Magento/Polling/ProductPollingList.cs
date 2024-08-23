@@ -61,13 +61,6 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
 
         var products = await GetProducts(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate },
             storeViewIdentifier.ToString());
-            
-        await Logger.LogAsync(new
-        {
-            products.Items,
-            request.Memory
-        });
-            
         return new()
         {
             FlyBird = products.Items.Any(),
