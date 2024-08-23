@@ -66,7 +66,8 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
             
             await Logger.LogAsync(new
             {
-                products.Items
+                products.Items,
+                request.Memory
             });
             
             return new()
