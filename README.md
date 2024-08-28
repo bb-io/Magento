@@ -78,7 +78,9 @@ Adobe Commerce is the leading platform for open commerce innovation. It’s desi
 - **Update product** - Update product with specified data.
 - **Update product from HTML** - Update product with specified SKU from HTML. This action is useful in pair with the `Get product as HTML` action when you need to get the product content as HTML and then translate the document.
 - **Delete product** - Delete product by specified SKU.
-- **Add custom attribute** - Add custom attribute to product by specified SKU.
+- **Add custom attribute** - Allows you to add a custom attribute to a specific product.
+
+> Most actions also have an optional store view input. You can use this to determine in which store view an action should be executed.
 
 ## Events
 
@@ -89,7 +91,13 @@ Adobe Commerce is the leading platform for open commerce innovation. It’s desi
 - **On pages created** - Triggered when new pages are created.
 - **On pages updated** - Triggered when pages are updated.
 
-Note, that these events are based on polling mechanism and are triggered periodically. The interval can be set in the bird editor. The interval should be between 5 minutes and 7 days.
+> Events are based on a polling mechanism and are triggered periodically. The interval can be set in the bird editor. The interval should be between 5 minutes and 7 days.
+
+## Example
+
+![1724849643171](image/README/1724849643171.png)
+
+In the example above you see how you can create a bird that takes newly created products and automatically translates them using NMT.
 
 ## Feedback
 
