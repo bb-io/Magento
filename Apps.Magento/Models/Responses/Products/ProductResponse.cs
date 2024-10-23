@@ -63,7 +63,7 @@ public class ExtensionAttributes
     [DefinitionIgnore]
     public List<int> WebsiteIds { get; set; } = new();
     
-    [DefinitionIgnore]
+    [Display("Category links")]
     public List<CategoryLink> CategoryLinks { get; set; } = new();
     
     [DefinitionIgnore]

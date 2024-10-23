@@ -82,6 +82,12 @@ Adobe Commerce is the leading platform for open commerce innovation. It’s desi
 
 > Most actions also have an optional store view input. You can use this to determine in which store view an action should be executed.
 
+### Categories
+
+- **Get all categories** - Get all categories.
+- **Get category** - Get category by specified ID.
+- **Get categories for product** - Get categories for product by specified SKU.
+
 ## Events
 
 - **On products created** - Triggered when new products are created.
