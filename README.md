@@ -62,6 +62,12 @@ Magento is the leading platform for open commerce innovation. It’s designed to
 - **Delete product** - Delete product by specified SKU.
 - **Add custom attribute** - Add custom attribute to product by specified SKU.
 
+### Categories
+
+- **Get all categories** - Get all categories.
+- **Get category** - Get category by specified ID.
+- **Get categories for product** - Get categories for product by specified SKU.
+
 ## Events
 
 - **On products created** - Triggered when new products are created.
