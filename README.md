@@ -1,17 +1,35 @@
-# Blackbird.io Magento
+# Blackbird.io Adobe Commerce - Magento
 
 Blackbird is the new automation backbone for the language technology industry. Blackbird provides enterprise-scale automation and orchestration with a simple no-code/low-code platform. Blackbird enables ambitious organizations to identify, vet and automate as many processes as possible. Not just localization workflows, but any business and IT process. This repository represents an application that is deployable on Blackbird and usable inside the workflow editor.
 
 ## Introduction
 
-Magento is the leading platform for open commerce innovation. It’s designed to be flexible and scalable, able to support businesses of all sizes – from small startups to large enterprises.
+Adobe Commerce is the leading platform for open commerce innovation. It’s designed to be flexible and scalable, able to support businesses of all sizes – from small startups to large enterprises.
 
 <!-- begin docs -->
 
 ## Before setting up
 
+- Make sure you have admin level access to Magento.
 - You can find the `Base URL` of your Magento URL. It can look like `https://magento.testing.organization.com/`
-- For receiving the `Consumer key`, `Consumer secret`, `Access token` and `Access token secret` you need to create a new integration in your Magento account. You can do this by going to `System` -> `Extensions` -> `Integrations` -> `Add new integration`. After creating the integration you will receive the `Consumer key`, `Consumer secret`, `Access token` and `Access token secret`. Note, that you don't need to provide any values for the `Callback URL` and `Identity link URL` fields. You can select all the available resources for the integration to avoid any issues with the permissions. Or select the resources that you need for your specific use case. See the current available functionality of the app below in the documentation.
+- In order to receive the `Consumer key`, `Consumer secret`, `Access token` and `Access token secret` you need to create a new integration in your Magento account. Follow the instructions below. 
+
+## Creating an integration
+
+1. Go to `System` -> `Extensions` -> `Integrations`. Click `Add new integration`.
+
+![1724846646011](image/README/1724846646011.png)
+
+2. Enter the name of the integration. Click on `API` and select resource access `All`*. Note, that you don't need to provide any values for the `Callback URL` and `Identity link URL` fields. 
+3. Click save.
+4. On the integration overview screen click `Activate`.
+
+![1724846707099](image/README/1724846707099.png)
+
+5. On the top right corner click `Allow`.
+6. You will receive the `Consumer key`, `Consumer secret`, `Access token` and `Access token secret`.
+
+> *You can select all the available resources for the integration to avoid any issues with the permissions. Or select the resources that you need for your specific use case. See the current available functionality of the app below in the documentation.
 
 ## Connecting
 
@@ -60,7 +78,9 @@ Magento is the leading platform for open commerce innovation. It’s designed to
 - **Update product** - Update product with specified data.
 - **Update product from HTML** - Update product with specified SKU from HTML. This action is useful in pair with the `Get product as HTML` action when you need to get the product content as HTML and then translate the document.
 - **Delete product** - Delete product by specified SKU.
-- **Add custom attribute** - Add custom attribute to product by specified SKU.
+- **Add custom attribute** - Allows you to add a custom attribute to a specific product.
+
+> Most actions also have an optional store view input. You can use this to determine in which store view an action should be executed.
 
 ### Categories
 
@@ -77,7 +97,13 @@ Magento is the leading platform for open commerce innovation. It’s designed to
 - **On pages created** - Triggered when new pages are created.
 - **On pages updated** - Triggered when pages are updated.
 
-Note, that these events are based on polling mechanism and are triggered periodically. The interval can be set in the bird editor. The interval should be between 5 minutes and 7 days.
+> Events are based on a polling mechanism and are triggered periodically. The interval can be set in the bird editor. The interval should be between 5 minutes and 7 days.
+
+## Example
+
+![1724849643171](image/README/1724849643171.png)
+
+In the example above you see how you can create a bird that takes newly created products and automatically translates them using NMT.
 
 ## Feedback
 
