@@ -33,12 +33,20 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
     }
 
     [Action("Get product", Description = "Get product by specified SKU")]
-    public async Task<ProductResponse> GetProductBySkuAsync(
+    public async Task<ProductWithCategoriesResponse> GetProductBySkuAsync(
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
         [ActionParameter] ProductIdentifier identifier)
     {
-        return await Client.ExecuteWithErrorHandling<ProductResponse>(
+        var product = await Client.ExecuteWithErrorHandling<ProductResponse>(
             new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Get, Creds));
+        
+        var categoryActions = new CategoryActions(InvocationContext);
+        var categories = await categoryActions.GetCategoriesForProductAsync(identifier, storeViewIdentifier);
+        
+        return new ProductWithCategoriesResponse(product)
+        {
+            CategoryNames = categories.Items.Select(x => x.Name).ToList()
+        };
     }
 
     [Action("Get product as HTML", Description = "Get product by specified SKU as HTML")]
