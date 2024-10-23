@@ -6,6 +6,7 @@ using Apps.Magento.Models.Dtos;
 using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Requests.Products;
+using Apps.Magento.Models.Responses.Categories;
 using Apps.Magento.Models.Responses.Products;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common;
@@ -41,7 +42,16 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Get, Creds));
         
         var categoryActions = new CategoryActions(InvocationContext);
-        var categories = await categoryActions.GetCategoriesForProductAsync(identifier, storeViewIdentifier);
+        var categories = new CategoriesResponse();
+        
+        foreach(var category in product.ExtensionAttributes.CategoryLinks)
+        {
+            var categoryResponse = await categoryActions.GetCategoryAsync(new()
+            {
+                CategoryId = category.CategoryId
+            },storeViewIdentifier);
+            categories.Items.Add(categoryResponse);
+        }
         
         return new ProductWithCategoriesResponse(product)
         {
