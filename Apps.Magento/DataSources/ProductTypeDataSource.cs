@@ -11,7 +11,7 @@ public class ProductTypeDataSource(InvocationContext invocationContext) : AppInv
 {
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var request = new ApiRequest("/rest/default/V1/products/types", Method.Get, Creds);
+        var request = new ApiRequest("/rest/V1/products/types", Method.Get, Creds);
         var storeViews = await Client.ExecuteWithErrorHandling<List<ProductTypeDto>>(request);
         return storeViews
             .Where(x => context.SearchString == null || x.Name.Contains(context.SearchString))

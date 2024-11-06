@@ -10,4 +10,6 @@ public class ProductAttributeDto
     public string AttributeCode { get; set; } = string.Empty;
 
     public string DefaultFrontendLabel { get; set; } = string.Empty;
+    
+    public string FrontendInput { get; set; } = string.Empty;
 }
