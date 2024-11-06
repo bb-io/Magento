@@ -16,7 +16,7 @@ public class ConnectionValidator: IConnectionValidator
         
         try
         {
-            await apiClient.ExecuteWithErrorHandling(new ApiRequest("/rest/default/V1/analytics/link", Method.Get, credentialsProviders));
+            await apiClient.ExecuteWithErrorHandling(new ApiRequest("/rest/V1/analytics/link", Method.Get, credentialsProviders));
             return new ConnectionValidationResponse
             {
                 IsValid = true

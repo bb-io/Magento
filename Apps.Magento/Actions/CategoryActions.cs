@@ -12,7 +12,7 @@ namespace Apps.Magento.Actions;
 [ActionList]
 public class CategoryActions(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
-    [Action("Get all categories", Description = "Get all categories")]
+    [Action("Search categories", Description = "Retrieve all categories that match the specified criteria")]
     public async Task<CategoriesResponse> GetAllCategoriesAsync(
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier)
     {

@@ -17,7 +17,12 @@ public static class HtmlHelper
             "meta_title", "meta_description", "meta_keyword", "description"
         };
 
-        var attributesToInclude = customAttributes?.ToHashSet() ?? defaultAttributes;
+        var attributesToInclude = new HashSet<string>(defaultAttributes);
+        if (customAttributes != null)
+        {
+            attributesToInclude.UnionWith(customAttributes);
+        }
+        
         foreach (var customAttribute in product.CustomAttributes)
         {
             if (attributesToInclude.Contains(customAttribute.AttributeCode))

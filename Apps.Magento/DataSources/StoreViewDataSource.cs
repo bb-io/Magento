@@ -9,7 +9,7 @@ namespace Apps.Magento.DataSources;
 
 public class StoreViewDataSource(InvocationContext invocationContext) : AppInvocable(invocationContext), IAsyncDataSourceHandler
 {
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
+    public virtual async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         var request = new ApiRequest("/rest/default/V1/store/storeViews", Method.Get, Creds);
         var storeViews = await Client.ExecuteWithErrorHandling<List<StoreViewDto>>(request);

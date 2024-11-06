@@ -1,6 +1,7 @@
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace Apps.Magento.Models.Responses.Products;
 
@@ -183,10 +184,10 @@ public class Content
 
 public class CustomAttribute
 {
-    [Display("Attribute code")]
+    [Display("Attribute code"), JsonProperty("attribute_code")]
     public string AttributeCode { get; set; } = string.Empty;
      
-    [Display("Value"), JsonConverter(typeof(StringOrUndefinedConverter))]
+    [Display("Value"), JsonProperty("value"), JsonConverter(typeof(StringOrUndefinedConverter))]
     public string Value { get; set; } = string.Empty;
 }
 
