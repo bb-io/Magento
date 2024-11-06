@@ -18,7 +18,7 @@ namespace Apps.Magento.Actions;
 [ActionList]
 public class BlockActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : AppInvocable(invocationContext)
 {
-    [Action("Get all blocks", Description = "Get all blocks")]
+    [Action("Search blocks", Description = "Retrieve all blocks that match the specified criteria")]
     public async Task<BlocksResponse> GetAllBlocksAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
         [ActionParameter] FilterBlockRequest filterRequest)
     {

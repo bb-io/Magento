@@ -18,7 +18,7 @@ namespace Apps.Magento.Actions;
 [ActionList]
 public class PageActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : AppInvocable(invocationContext)
 {
-    [Action("Get all pages", Description = "Get all pages")]
+    [Action("Search pages", Description = "Retrieve all pages that match the specified criteria")]
     public async Task<PagesResponse> GetAllPagesAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
         [ActionParameter] FilterPageRequest filterRequest)
     {

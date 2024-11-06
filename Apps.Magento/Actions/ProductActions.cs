@@ -23,7 +23,7 @@ namespace Apps.Magento.Actions;
 public class ProductActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : AppInvocable(invocationContext)
 {
-    [Action("Get all products", Description = "Get all products")]
+    [Action("Search products", Description = "Retrieve all products that match the specified criteria")]
     public async Task<ProductsResponse> GetAllProductsAsync(
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
         [ActionParameter] FilterProductRequest filterRequest)
@@ -104,7 +104,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
 
     [Action("Update product", Description = "Update product by specified SKU")]
     public async Task<ProductResponse> UpdateProductBySkuAsync(
-        [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [ActionParameter] StoreViewWithAllOptionalIdentifier storeViewIdentifier,
         [ActionParameter] ProductIdentifier identifier,
         [ActionParameter] UpdateProductRequest updateProductRequest)
     {
@@ -116,7 +116,16 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         }
 
-        var product = await GetProductBySkuAsync(storeViewIdentifier, identifier);
+        var product = await GetProductBySkuAsync(new StoreViewOptionalIdentifier { StoreView = storeViewIdentifier.StoreView == "all" ? "default" : storeViewIdentifier.StoreView }, identifier);
+        
+        if(updateProductRequest.CustomAttributeKeys != null && updateProductRequest.CustomAttributeValues != null)
+        {
+            if(updateProductRequest.CustomAttributeKeys.Count() != updateProductRequest.CustomAttributeValues.Count())
+            {
+                throw new ArgumentException("Custom attribute keys and values count must be equal");
+            }
+        }
+        
         var mergedCustomAttributes = updateProductRequest.CustomAttributeKeys != null &&
                                      updateProductRequest.CustomAttributeValues != null
             ? updateProductRequest.CustomAttributeKeys.Zip(updateProductRequest.CustomAttributeValues,
@@ -138,18 +147,22 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
                 {
                     category_links = new List<object>()
                 },
-                custom_attributes = mergedCustomAttributes
+                custom_attributes = mergedCustomAttributes.Select(x => new
+                {
+                    attribute_code = x.AttributeCode,
+                    value = x.Value
+                }).ToList()
             }
         };
-
+        
         var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put, Creds)
             .AddBody(body);
         return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
     }
 
-    [Action("Update product as HTML", Description = "Update product by specified SKU with HTML content")]
+    [Action("Update product from HTML", Description = "Update product by specified SKU with HTML content")]
     public async Task<ProductResponse> UpdateProductBySkuAsHtmlAsync(
-        [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [ActionParameter] StoreViewWithAllOptionalIdentifier storeViewIdentifier,
         [ActionParameter] UpdateProductAsHtmlRequest updateProductAsHtmlRequest)
     {
         var htmlStream = await fileManagementClient.DownloadAsync(updateProductAsHtmlRequest.File);
@@ -161,7 +174,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         var productSku = updateProductAsHtmlRequest.ProductSku ?? htmlModel.ResourceId ??
             throw new ArgumentException(
                 "Couldn't find product SKU in the HTML document. Please specify it manually in the optional input.");
-        var product = await GetProductBySkuAsync(storeViewIdentifier, new ProductIdentifier { Sku = productSku });
+        var product = await GetProductBySkuAsync(new StoreViewOptionalIdentifier { StoreView = storeViewIdentifier.StoreView == "all" ? "default" : storeViewIdentifier.StoreView }, new ProductIdentifier { Sku = productSku });
         
         foreach (var customAttribute in productModel.CustomAttributes)
         {
@@ -220,11 +233,11 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
     }
 
     [Action("Delete product", Description = "Delete product by specified SKU")]
-    public async Task DeleteProductBySkuAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] ProductIdentifier identifier)
+    public async Task DeleteProductBySkuAsync([ActionParameter] ProductIdentifier identifier)
     {
+        var endpoint = $"/rest/default/V1/products/{identifier.Sku}";
         await Client.ExecuteWithErrorHandling(
-            new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Delete, Creds));
+            new ApiRequest(endpoint, Method.Delete, Creds));
     }
     
     [Action("Add custom attribute", Description = "Add custom attribute to product by specified SKU")]

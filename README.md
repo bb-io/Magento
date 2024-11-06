@@ -51,7 +51,7 @@ Adobe Commerce is the leading platform for open commerce innovation. It’s desi
 
 ### Blocks
 
-- **Get all blocks** - Get all blocks.
+- **Search blocks** - Retrieve all blocks that match the specified search criteria.
 - **Get block** - Get block by specified ID.
 - **Get block as HTML** - Get block by specified ID as HTML.
 - **Create block** - Create block with specified data.
@@ -61,7 +61,7 @@ Adobe Commerce is the leading platform for open commerce innovation. It’s desi
 
 ### Pages
 
-- **Get all pages** - Get all pages.
+- **Search pages** - Retrieve all pages that match the specified search criteria.
 - **Get page** - Get page by specified ID.
 - **Get page as HTML** - Get page by specified ID as HTML.
 - **Create page** - Create page with specified data.
@@ -71,7 +71,7 @@ Adobe Commerce is the leading platform for open commerce innovation. It’s desi
 
 ### Products
 
-- **Get all products** - Get all products.
+- **Search products** - Retrieve all products that match the specified search criteria.
 - **Get product** - Get product by specified SKU.
 - **Get product as HTML** - Get product by specified SKU as HTML. Using optional parameters you can specify `Custom attributes` that you want to include in the HTML.
 - **Create product** - Create product with specified data.
