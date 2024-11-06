@@ -11,10 +11,11 @@ public class ProductAttributeDataSource(InvocationContext invocationContext) : A
 {
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var request = new ApiRequest("/rest/default/V1/products/attributes?searchCriteria", Method.Get, Creds);
+        var request = new ApiRequest("/rest/V1/products/attributes?searchCriteria", Method.Get, Creds);
         var productAttributes = await Client.ExecuteWithErrorHandling<ProductAttributesDto>(request);
         return productAttributes.Items
             .Where(x => context.SearchString == null || x.DefaultFrontendLabel.Contains(context.SearchString))
+            .Where(x => x.FrontendInput == "text" || x.FrontendInput == "textarea")
             .ToDictionary(x => x.AttributeCode, x => x.DefaultFrontendLabel);
     }
 }

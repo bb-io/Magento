@@ -11,7 +11,7 @@ public class StoreViewDataSource(InvocationContext invocationContext) : AppInvoc
 {
     public virtual async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var request = new ApiRequest("/rest/default/V1/store/storeViews", Method.Get, Creds);
+        var request = new ApiRequest("/rest/V1/store/storeViews", Method.Get, Creds);
         var storeViews = await Client.ExecuteWithErrorHandling<List<StoreViewDto>>(request);
         return storeViews
             .Where(x => context.SearchString == null || x.Name.Contains(context.SearchString))

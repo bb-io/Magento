@@ -235,7 +235,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
     [Action("Delete product", Description = "Delete product by specified SKU")]
     public async Task DeleteProductBySkuAsync([ActionParameter] ProductIdentifier identifier)
     {
-        var endpoint = $"/rest/default/V1/products/{identifier.Sku}";
+        var endpoint = $"/rest/V1/products/{identifier.Sku}";
         await Client.ExecuteWithErrorHandling(
             new ApiRequest(endpoint, Method.Delete, Creds));
     }

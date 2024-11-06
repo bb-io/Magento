@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Product>Adobe Commerce - Magento [Beta]</Product>
         <Description>Magento is the leading platform for open commerce innovation. It’s designed to be flexible and scalable, able to support businesses of all sizes – from small startups to large enterprises.</Description>
-        <Version>1.0.4</Version>
+        <Version>1.0.5</Version>
         <AssemblyName>Apps.Magento</AssemblyName>
         <RootNamespace>Apps.Magento</RootNamespace>
         <PackageId>Apps.Magento</PackageId>
