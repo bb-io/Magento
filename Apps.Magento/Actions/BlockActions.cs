@@ -19,30 +19,27 @@ namespace Apps.Magento.Actions;
 public class BlockActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : AppInvocable(invocationContext)
 {
     [Action("Search blocks", Description = "Retrieve all blocks that match the specified criteria")]
-    public async Task<BlocksResponse> GetAllBlocksAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] FilterBlockRequest filterRequest)
+    public async Task<BlocksResponse> GetAllBlocksAsync([ActionParameter] FilterBlockRequest filterRequest)
     {
         var queryString = BuildQueryString(filterRequest);
-        var requestUrl = $"/rest/{storeViewIdentifier}/V1/cmsBlock/search?searchCriteria{queryString}";
+        var requestUrl = $"/rest/V1/cmsBlock/search?searchCriteria{queryString}";
 
         var request = new ApiRequest(requestUrl, Method.Get, Creds);
         return await Client.ExecuteWithErrorHandling<BlocksResponse>(request);
     }
     
     [Action("Get block", Description = "Get block by specified ID")]
-    public async Task<BlockResponse> GetBlockAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
-        [ActionParameter] BlockIdentifier identifier)
+    public async Task<BlockResponse> GetBlockAsync([ActionParameter] BlockIdentifier identifier)
     {
-        var requestUrl = $"/rest/{storeViewIdentifier}/V1/cmsBlock/{identifier.BlockId}";
+        var requestUrl = $"/rest/V1/cmsBlock/{identifier.BlockId}";
         var request = new ApiRequest(requestUrl, Method.Get, Creds);
         return await Client.ExecuteWithErrorHandling<BlockResponse>(request);
     }
     
     [Action("Get block as HTML", Description = "Get block by specified ID as HTML")]
-    public async Task<FileReference> GetBlockAsHtmlAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] BlockIdentifier identifier)
+    public async Task<FileReference> GetBlockAsHtmlAsync([ActionParameter] BlockIdentifier identifier)
     {
-        var block = await GetBlockAsync(storeViewIdentifier, identifier);
+        var block = await GetBlockAsync(identifier);
         var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Block, identifier.BlockId, block.Content);
         return await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{block.Identifier}.html");
     }
@@ -77,7 +74,7 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     {
         ValidateRequestIfAllPropertiesAreNullThrowException(updateBlockRequest);
         
-        var block = await GetBlockAsync(storeViewIdentifier, identifier);
+        var block = await GetBlockAsync(identifier);
         block.Identifier = updateBlockRequest.Identifier ?? block.Identifier;
         block.Title = updateBlockRequest.Title ?? block.Title;
         block.Content = updateBlockRequest.Content ?? block.Content;
