@@ -82,7 +82,8 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
         
         var request = new ApiRequest($"/rest/V1/cmsBlock/{identifier.BlockId}", Method.Put, Creds)
             .AddBody(new { block });
-        return await Client.ExecuteWithErrorHandling<BlockResponse>(request);
+        var blockResponse = await Client.ExecuteWithErrorHandling<BlockResponse>(request);
+        return await GetBlockAsync(new() { BlockId = blockResponse.Id });
     }
     
     [Action("Update block from HTML", Description = "Update block with specified data from HTML")]
