@@ -22,4 +22,7 @@ public class CreateProductRequest
     public string TypeId { get; set; } = string.Empty;
 
     public double Weight { get; set; }
+
+    [Display("Price view")]
+    public string? PriceView { get; set; } 
 }

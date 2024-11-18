@@ -75,6 +75,16 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
     [Action("Create product", Description = "Create product with specified data")]
     public async Task<ProductResponse> CreateProductAsync([ActionParameter] CreateProductRequest createProductRequest)
     {
+        var customAttributes = new List<object>();
+        if (!string.IsNullOrEmpty(createProductRequest.PriceView))
+        {
+            customAttributes.Add(new
+            {
+                attribute_code = "price_view",
+                value = createProductRequest.PriceView
+            });
+        }
+        
         var body = new
         {
             product = new
@@ -91,7 +101,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
                 {
                     category_links = new List<object>()
                 },
-                custom_attributes = new List<object>()
+                custom_attributes = customAttributes
             }
         };
 

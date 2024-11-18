@@ -87,9 +87,22 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
         page.Active = pageRequest.Active ?? page.Active;
         
         var request = new ApiRequest($"/rest/V1/cmsPage/{identifier.PageId}", Method.Put, Creds)
-            .AddBody(new { page });
-        await Client.ExecuteWithErrorHandling<PageResponse>(request);
+            .AddBody(new { page = new
+            {
+                id = page.Id,
+                identifier = page.Identifier,
+                title = page.Title,
+                page_layout = page.PageLayout,
+                meta_title = page.MetaTitle,
+                meta_keywords = page.MetaKeywords,
+                meta_description = page.MetaDescription,
+                content_heading = page.ContentHeading,
+                content = page.Content,
+                sort_order = page.SortOrder,
+                active = page.Active
+            } });
         
+        await Client.ExecuteWithErrorHandling<PageResponse>(request);
         return await GetPageByIdAsync(identifier);
     }
     
