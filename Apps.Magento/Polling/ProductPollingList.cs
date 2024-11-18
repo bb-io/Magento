@@ -61,6 +61,8 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
 
         var products = await GetProducts(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate },
             storeViewIdentifier.ToString());
+        products.Items = products.Items.Where(x => x.CreatedAt != x.UpdatedAt).ToList();
+
         return new()
         {
             FlyBird = products.Items.Any(),
@@ -71,8 +73,8 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
             }
         };
     }
-    
-    public async Task<ProductsResponse> GetProducts(BaseFilterRequest request, string storeView)
+
+    private async Task<ProductsResponse> GetProducts(BaseFilterRequest request, string storeView)
     {
         var queryString = BuildQueryString(request);
         var requestUrl = $"/rest/{storeView}/V1/products?searchCriteria{queryString}";

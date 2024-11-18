@@ -11,6 +11,7 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Newtonsoft.Json;
 using RestSharp;
 
 namespace Apps.Magento.Actions;
@@ -19,37 +20,34 @@ namespace Apps.Magento.Actions;
 public class PageActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : AppInvocable(invocationContext)
 {
     [Action("Search pages", Description = "Retrieve all pages that match the specified criteria")]
-    public async Task<PagesResponse> GetAllPagesAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
-        [ActionParameter] FilterPageRequest filterRequest)
+    public async Task<PagesResponse> GetAllPagesAsync([ActionParameter] FilterPageRequest filterRequest)
     {
         var queryString = BuildQueryString(filterRequest);
-        var requestUrl = $"/rest/{storeViewIdentifier}/V1/cmsPage/search?searchCriteria{queryString}";
+        var requestUrl = $"/rest/V1/cmsPage/search?searchCriteria{queryString}";
         var request = new ApiRequest(requestUrl, Method.Get, Creds);
         return await Client.ExecuteWithErrorHandling<PagesResponse>(request);
     }
 
     [Action("Get page", Description = "Get page by specified ID")]
-    public async Task<PageResponse> GetPageByIdAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
-        [ActionParameter] PageIdentifier identifier)
+    public async Task<PageResponse> GetPageByIdAsync([ActionParameter] PageIdentifier identifier)
     {
         return await Client.ExecuteWithErrorHandling<PageResponse>(
-            new ApiRequest($"/rest/{storeViewIdentifier}/V1/cmsPage/{identifier.PageId}", Method.Get, Creds));
+            new ApiRequest($"/rest/V1/cmsPage/{identifier.PageId}", Method.Get, Creds));
     }
     
     [Action("Get page as HTML", Description = "Get page by specified ID as HTML")]
     public async Task<FileReference> GetPageByIdAsHtmlAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
         [ActionParameter] PageIdentifier identifier)
     {
-        var page = await GetPageByIdAsync(storeViewIdentifier, identifier);
+        var page = await GetPageByIdAsync(identifier);
         var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Page, identifier.PageId, page.Content);
         return await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{page.Identifier}.html");
     }
 
     [Action("Create page", Description = "Create a new page")]
-    public async Task<PageResponse> CreatePageAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] CreatePageRequest pageRequest)
+    public async Task<PageResponse> CreatePageAsync([ActionParameter] CreatePageRequest pageRequest)
     {
-        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/cmsPage", Method.Post, Creds)
+        var request = new ApiRequest($"/rest/V1/cmsPage", Method.Post, Creds)
             .AddBody(new
             {
                 page = new
@@ -72,13 +70,12 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     }
 
     [Action("Update page", Description = "Update page by specified ID")]
-    public async Task<PageResponse> UpdatePageByIdAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] PageIdentifier identifier,
+    public async Task<PageResponse> UpdatePageByIdAsync([ActionParameter] PageIdentifier identifier,
         [ActionParameter] UpdatePageRequest pageRequest)
     {
         ValidateRequestIfAllPropertiesAreNullThrowException(pageRequest);        
         
-        var page = await GetPageByIdAsync(storeViewIdentifier, identifier);
+        var page = await GetPageByIdAsync(identifier);
         page.Identifier = pageRequest.Identifier ?? page.Identifier;
         page.Title = pageRequest.Title ?? page.Title;
         page.PageLayout = pageRequest.PageLayout ?? page.PageLayout;
@@ -89,15 +86,16 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
         page.Content = pageRequest.Content ?? page.Content;
         page.SortOrder = pageRequest.SortOrder ?? page.SortOrder;
         page.Active = pageRequest.Active ?? page.Active;
-
-        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/cmsPage/{identifier.PageId}", Method.Put, Creds)
+        
+        var request = new ApiRequest($"/rest/V1/cmsPage/{identifier.PageId}", Method.Put, Creds)
             .AddBody(new { page });
-        return await Client.ExecuteWithErrorHandling<PageResponse>(request);
+        await Client.ExecuteWithErrorHandling<PageResponse>(request);
+        
+        return await GetPageByIdAsync(identifier);
     }
     
     [Action("Update page from HTML", Description = "Update page from HTML document. Recommended to use with action: Get page as HTML")]
-    public async Task<PageResponse> UpdatePageByIdFromHtmlAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
-        [ActionParameter] UpdatePageFromHtmlRequest request)
+    public async Task<PageResponse> UpdatePageByIdFromHtmlAsync([ActionParameter] UpdatePageFromHtmlRequest request)
     {
         var htmlStream = await fileManagementClient.DownloadAsync(request.File);
         var html = await new StreamReader(htmlStream).ReadToEndAsync();
@@ -105,7 +103,7 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
         
         var pageId = request.PageId ?? htmlModel.ResourceId ?? throw new ArgumentException("Couldn't find page ID in the HTML document. " +
             "Please specify it manually in the optional input.");
-        return await UpdatePageByIdAsync(storeViewIdentifier, new PageIdentifier
+        return await UpdatePageByIdAsync(new PageIdentifier
         {
             PageId = pageId
         }, new UpdatePageRequest
@@ -115,10 +113,9 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     }
 
     [Action("Delete page", Description = "Delete page by specified ID")]
-    public async Task DeletePageByIdAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
-        [ActionParameter] PageIdentifier identifier)
+    public async Task DeletePageByIdAsync([ActionParameter] PageIdentifier identifier)
     {
         await Client.ExecuteWithErrorHandling(
-            new ApiRequest($"/rest/{storeViewIdentifier}/V1/cmsPage/{identifier.PageId}", Method.Delete, Creds));
+            new ApiRequest($"/rest/V1/cmsPage/{identifier.PageId}", Method.Delete, Creds));
     }
 }

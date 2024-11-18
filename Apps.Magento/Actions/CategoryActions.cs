@@ -13,20 +13,18 @@ namespace Apps.Magento.Actions;
 public class CategoryActions(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
     [Action("Search categories", Description = "Retrieve all categories that match the specified criteria")]
-    public async Task<CategoriesResponse> GetAllCategoriesAsync(
-        [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier)
+    public async Task<CategoriesResponse> GetAllCategoriesAsync()
     {
-        var requestUrl = $"/rest/{storeViewIdentifier}/V1/categories/list";
+        var requestUrl = $"/rest/V1/categories/list?searchCriteria";
         var request = new ApiRequest(requestUrl, Method.Get, Creds);
         return await Client.ExecuteWithErrorHandling<CategoriesResponse>(request);
     }
     
     [Action("Get category", Description = "Get category by ID")]
     public async Task<CategoryResponse> GetCategoryAsync(
-        [ActionParameter] CategoryIdentifier categoryIdentifier,
-        [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier)
+        [ActionParameter] CategoryIdentifier categoryIdentifier)
     {
-        var requestUrl = $"/rest/{storeViewIdentifier}/V1/categories/{categoryIdentifier.CategoryId}";
+        var requestUrl = $"/rest/V1/categories/{categoryIdentifier.CategoryId}";
         var request = new ApiRequest(requestUrl, Method.Get, Creds);
         return await Client.ExecuteWithErrorHandling<CategoryResponse>(request);
     }

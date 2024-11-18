@@ -23,7 +23,7 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> creds)
         try
         {
             var errorDto = JsonConvert.DeserializeObject<ErrorDto>(response.Content!)!;
-            return new Exception(errorDto.Message);
+            return new Exception(errorDto.ToString());
         }
         catch (Exception)
         {

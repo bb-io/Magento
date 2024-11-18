@@ -16,8 +16,7 @@ public class PagePollingList(InvocationContext invocationContext) : AppInvocable
 {
     [PollingEvent("On pages created", "Triggered when new pages are created")]
     public async Task<PollingEventResponse<DateMemory, PagesResponse>> OnPagesCreated(
-        PollingEventRequest<DateMemory> request,
-        [PollingEventParameter] StoreViewOptionalIdentifier storeViewIdentifier)
+        PollingEventRequest<DateMemory> request)
     {
         if (request.Memory is null)
         {
@@ -31,7 +30,7 @@ public class PagePollingList(InvocationContext invocationContext) : AppInvocable
             };
         }
         
-        var pages = await GetPages(new BaseFilterRequest { CreatedAt = request.Memory.LastInteractionDate }, storeViewIdentifier.ToString());
+        var pages = await GetPages(new BaseFilterRequest { CreatedAt = request.Memory.LastInteractionDate });
         return new()
         {
             FlyBird = pages.Items.Any(),
@@ -45,8 +44,7 @@ public class PagePollingList(InvocationContext invocationContext) : AppInvocable
     
     [PollingEvent("On pages updated", "Triggered when pages are updated")]
     public async Task<PollingEventResponse<DateMemory, PagesResponse>> OnPagesUpdated(
-        PollingEventRequest<DateMemory> request,
-        [PollingEventParameter] StoreViewOptionalIdentifier storeViewIdentifier)
+        PollingEventRequest<DateMemory> request)
     {
         if (request.Memory is null)
         {
@@ -60,7 +58,9 @@ public class PagePollingList(InvocationContext invocationContext) : AppInvocable
             };
         }
         
-        var pages = await GetPages(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate }, storeViewIdentifier.ToString());
+        var pages = await GetPages(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate });
+        pages.Items = pages.Items.Where(x => x.CreationTime != x.UpdateTime).ToList();
+        
         return new()
         {
             FlyBird = pages.Items.Any(),
@@ -72,10 +72,10 @@ public class PagePollingList(InvocationContext invocationContext) : AppInvocable
         };
     }
     
-    private async Task<PagesResponse> GetPages(BaseFilterRequest filter, string storeView)
+    private async Task<PagesResponse> GetPages(BaseFilterRequest filter)
     {
         var queryString = BuildQueryString(filter);
-        var requestUrl = $"/rest/{storeView}/V1/cmsPage/search?searchCriteria{queryString}";
+        var requestUrl = $"/rest/V1/cmsPage/search?searchCriteria{queryString}";
         return await Client.ExecuteWithErrorHandling<PagesResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
     }
     

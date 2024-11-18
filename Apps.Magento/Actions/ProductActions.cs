@@ -49,7 +49,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             var categoryResponse = await categoryActions.GetCategoryAsync(new()
             {
                 CategoryId = category.CategoryId
-            },storeViewIdentifier);
+            });
             categories.Items.Add(categoryResponse);
         }
         
