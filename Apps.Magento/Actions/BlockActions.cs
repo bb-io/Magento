@@ -54,14 +54,18 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
                 identifier = createBlockRequest.Identifier,
                 title = createBlockRequest.Title,
                 content = createBlockRequest.Content,
-                creation_time = DateTime.UtcNow.ToString(CultureInfo.InvariantCulture),
                 active = true
             }
         };
         
         var request = new ApiRequest("/rest/V1/cmsBlock", Method.Post, Creds)
             .AddBody(body);
-        return await Client.ExecuteWithErrorHandling<BlockResponse>(request);
+        var blockResponse = await Client.ExecuteWithErrorHandling<BlockResponse>(request);
+        
+        return await GetBlockAsync(new BlockIdentifier
+        {
+            BlockId = blockResponse.Id
+        });
     }
      
     [Action("Update block", Description = "Update block with specified data")]

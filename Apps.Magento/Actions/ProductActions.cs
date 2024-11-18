@@ -73,9 +73,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
     }
 
     [Action("Create product", Description = "Create product with specified data")]
-    public async Task<ProductResponse> CreateProductAsync(
-        [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] CreateProductRequest createProductRequest)
+    public async Task<ProductResponse> CreateProductAsync([ActionParameter] CreateProductRequest createProductRequest)
     {
         var body = new
         {
@@ -97,7 +95,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         };
 
-        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/products", Method.Post, Creds)
+        var request = new ApiRequest("/rest/V1/products", Method.Post, Creds)
             .AddBody(body);
         return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
     }

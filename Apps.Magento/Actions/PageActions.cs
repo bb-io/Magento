@@ -60,7 +60,6 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
                     meta_description = pageRequest.MetaDescription,
                     content_heading = pageRequest.ContentHeading,
                     content = pageRequest.Content,
-                    creation_time = DateTime.UtcNow.ToString(CultureInfo.InvariantCulture),
                     sort_order = pageRequest.SortOrder,
                     active = true
                 }
