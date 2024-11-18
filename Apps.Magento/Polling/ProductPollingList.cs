@@ -1,9 +1,9 @@
 using Apps.Magento.Api;
 using Apps.Magento.Invocables;
-using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Responses.Products;
 using Apps.Magento.Polling.Models;
+using Apps.Magento.Polling.Models.Requests;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
 using RestSharp;
@@ -16,7 +16,7 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
     [PollingEvent("On products created", "Triggered when new products are created")]
     public async Task<PollingEventResponse<DateMemory, ProductsResponse>> OnProductsCreated(
         PollingEventRequest<DateMemory> request,
-        [PollingEventParameter] StoreViewOptionalIdentifier storeViewIdentifier)
+        [PollingEventParameter] OnProductsUpdatedRequest filterRequest)
     {
         if (request.Memory is null)
         {
@@ -30,7 +30,7 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
             };
         }
         
-        var products = await GetProducts(new BaseFilterRequest { CreatedAt = request.Memory.LastInteractionDate }, storeViewIdentifier.ToString());
+        var products = await GetProducts(new BaseFilterRequest { CreatedAt = request.Memory.LastInteractionDate, Title = filterRequest.Title });
         return new()
         {
             FlyBird = products.Items.Any(),
@@ -45,7 +45,7 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
     [PollingEvent("On products updated", "Triggered when products are updated")]
     public async Task<PollingEventResponse<DateMemory, ProductsResponse>> OnProductsUpdated(
         PollingEventRequest<DateMemory> request,
-        [PollingEventParameter] StoreViewOptionalIdentifier storeViewIdentifier)
+        [PollingEventParameter] OnProductsUpdatedRequest filterRequest)
     {
         if (request.Memory is null)
         {
@@ -59,8 +59,9 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
             };
         }
 
-        var products = await GetProducts(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate },
-            storeViewIdentifier.ToString());
+        var products = await GetProducts(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate, Title = filterRequest.Title });
+        products.Items = products.Items.Where(x => x.CreatedAt != x.UpdatedAt).ToList();
+
         return new()
         {
             FlyBird = products.Items.Any(),
@@ -71,11 +72,11 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
             }
         };
     }
-    
-    public async Task<ProductsResponse> GetProducts(BaseFilterRequest request, string storeView)
+
+    private async Task<ProductsResponse> GetProducts(BaseFilterRequest request)
     {
         var queryString = BuildQueryString(request);
-        var requestUrl = $"/rest/{storeView}/V1/products?searchCriteria{queryString}";
+        var requestUrl = $"/rest/V1/products?searchCriteria{queryString}";
         return await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
     }
 }

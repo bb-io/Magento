@@ -6,7 +6,7 @@ namespace Apps.Magento.Models.Identifiers;
 
 public class StoreViewOptionalIdentifier  
 {
-    [Display("Store view", Description = "If you will not specify it it will be default"), DataSource(typeof(StoreViewDataSource))]
+    [Display("Store view", Description = "If you will not specify it it will be empty"), DataSource(typeof(StoreViewDataSource))]
     public string? StoreView { get; set; }
 
     public override string ToString()

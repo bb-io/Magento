@@ -13,7 +13,7 @@ public class PageDataSource(InvocationContext invocationContext) : AppInvocable(
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         var actions = new PageActions(InvocationContext, null!);
-        var pages = await actions.GetAllPagesAsync(new StoreViewOptionalIdentifier(), new FilterPageRequest()
+        var pages = await actions.GetAllPagesAsync(new FilterPageRequest()
         {
             Title = context.SearchString
         });

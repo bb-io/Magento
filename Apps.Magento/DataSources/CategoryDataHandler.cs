@@ -1,6 +1,5 @@
 using Apps.Magento.Actions;
 using Apps.Magento.Invocables;
-using Apps.Magento.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
@@ -13,7 +12,7 @@ public class CategoryDataHandler(InvocationContext invocationContext)
         CancellationToken cancellationToken)
     {
         var actions = new CategoryActions(InvocationContext);
-        var pages = await actions.GetAllCategoriesAsync(new StoreViewOptionalIdentifier());
+        var pages = await actions.GetAllCategoriesAsync();
 
         return pages.Items
             .ToDictionary(x => x.Id, x => x.Name);
