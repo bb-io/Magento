@@ -1,3 +1,4 @@
+using System.Text;
 using Apps.Magento.Api;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Requests;
@@ -59,9 +60,10 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
             };
         }
 
-        var products = await GetProducts(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate, Title = filterRequest.Title });
+        var products = await GetProducts(new BaseFilterRequest
+            { UpdatedAt = request.Memory.LastInteractionDate, Title = filterRequest.Title });
         products.Items = products.Items.Where(x => x.CreatedAt != x.UpdatedAt).ToList();
-
+            
         return new()
         {
             FlyBird = products.Items.Any(),
@@ -78,5 +80,46 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
         var queryString = BuildQueryString(request);
         var requestUrl = $"/rest/V1/products?searchCriteria{queryString}";
         return await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
+    }
+    
+    protected override string BuildQueryString(BaseFilterRequest filterRequest)
+    {
+        var queryString = new StringBuilder();
+        var filterIndex = 0;
+
+        if (!string.IsNullOrEmpty(filterRequest.Title))
+        {
+            queryString.Append($"[filterGroups][{filterIndex}][filters][0][field]={Uri.EscapeDataString("name")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][value]={Uri.EscapeDataString($"%{filterRequest.Title}%")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][conditionType]={Uri.EscapeDataString("like")}");
+
+            filterIndex += 1;
+        }
+        
+        if (filterRequest.CreatedAt.HasValue)
+        {
+            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("created_at")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
+            
+            filterIndex += 1;
+        }
+
+        if (filterRequest.UpdatedAt.HasValue)
+        {
+            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("updated_at")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
+            
+            filterIndex += 1;
+        }
+
+        return queryString.ToString();
     }
 }
