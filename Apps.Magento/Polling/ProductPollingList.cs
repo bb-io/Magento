@@ -48,58 +48,37 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
         PollingEventRequest<DateMemory> request,
         [PollingEventParameter] OnProductsUpdatedRequest filterRequest)
     {
-        try
+        if (request.Memory is null)
         {
-            if (request.Memory is null)
-            {
-                return new()
-                {
-                    FlyBird = false,
-                    Memory = new()
-                    {
-                        LastInteractionDate = DateTime.UtcNow
-                    }
-                };
-            }
-
-            var products = await GetProducts(new BaseFilterRequest
-                { UpdatedAt = request.Memory.LastInteractionDate, Title = filterRequest.Title });
-            var items = products.Items.Where(x => x.CreatedAt != x.UpdatedAt).ToList();
-            
-            await WebhookLogger.LogAsync(new
-            {
-                ItemsBeforeWhere = products.Items,
-                itemsAfterWhere = items,
-            });
-
             return new()
             {
-                FlyBird = products.Items.Any(),
-                Result = products,
+                FlyBird = false,
                 Memory = new()
                 {
                     LastInteractionDate = DateTime.UtcNow
                 }
             };
         }
-        catch (Exception e)
+
+        var products = await GetProducts(new BaseFilterRequest
+            { UpdatedAt = request.Memory.LastInteractionDate, Title = filterRequest.Title });
+        products.Items = products.Items.Where(x => x.CreatedAt != x.UpdatedAt).ToList();
+            
+        return new()
         {
-            await WebhookLogger.LogAsync(e);
-            throw;
-        }
+            FlyBird = products.Items.Any(),
+            Result = products,
+            Memory = new()
+            {
+                LastInteractionDate = DateTime.UtcNow
+            }
+        };
     }
 
     private async Task<ProductsResponse> GetProducts(BaseFilterRequest request)
     {
         var queryString = BuildQueryString(request);
         var requestUrl = $"/rest/V1/products?searchCriteria{queryString}";
-        await WebhookLogger.LogAsync(new
-        {
-            queryString,
-            requestUrl,
-            request
-        });
-        
         return await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
     }
     
