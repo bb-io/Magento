@@ -1,8 +1,10 @@
 using System.Globalization;
+using System.Text;
 using Apps.Magento.Api;
 using Apps.Magento.Constants;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Identifiers;
+using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Requests.Blocks;
 using Apps.Magento.Models.Responses.Blocks;
 using Apps.Magento.Utils;
@@ -111,5 +113,46 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
         var requestUrl = $"/rest/V1/cmsBlock/{identifier.BlockId}";
         var request = new ApiRequest(requestUrl, Method.Delete, Creds);
         await Client.ExecuteWithErrorHandling(request);
+    }
+    
+    protected override string BuildQueryString(BaseFilterRequest filterRequest)
+    {
+        var queryString = new StringBuilder();
+        var filterIndex = 0;
+
+        if (!string.IsNullOrEmpty(filterRequest.Title))
+        {
+            queryString.Append($"[filterGroups][{filterIndex}][filters][0][field]={Uri.EscapeDataString("title")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][value]={Uri.EscapeDataString($"%{filterRequest.Title}%")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][conditionType]={Uri.EscapeDataString("like")}");
+
+            filterIndex += 1;
+        }
+        
+        if (filterRequest.CreatedAt.HasValue)
+        {
+            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("creation_time")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
+            
+            filterIndex += 1;
+        }
+
+        if (filterRequest.UpdatedAt.HasValue)
+        {
+            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("update_time")}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
+            queryString.Append(
+                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
+            
+            filterIndex += 1;
+        }
+
+        return queryString.ToString();
     }
 }
