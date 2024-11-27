@@ -30,7 +30,29 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
     {
         var queryString = BuildQueryString(filterRequest);
         var requestUrl = $"/rest/{storeViewIdentifier}/V1/products?searchCriteria{queryString}";
-        return await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
+        var products = await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
+
+        if (filterRequest.CategoryIds != null)
+        {
+            var result = new List<ProductResponse>();
+            foreach (var productResponse in products.Items)
+            {
+                var categoriesCustomAttribute = productResponse.CustomAttributes.FirstOrDefault(x => x.AttributeCode == "category_ids");
+                if (categoriesCustomAttribute != null)
+                {
+                    var categoryIds = JsonConvert.DeserializeObject<List<string>>(categoriesCustomAttribute.Value)!;
+                    if (filterRequest.CategoryIds.All(id => categoryIds.Contains(id)))
+                    {
+                        result.Add(productResponse);
+                    }
+                }
+            }
+            
+            products.Items = result;
+            products.TotalCount = result.Count;
+        }
+        
+        return products;
     }
 
     [Action("Get product", Description = "Get product by specified SKU")]

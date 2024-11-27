@@ -7,6 +7,7 @@ using Apps.Magento.Polling.Models;
 using Apps.Magento.Polling.Models.Requests;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
+using Newtonsoft.Json;
 using RestSharp;
 
 namespace Apps.Magento.Polling;
@@ -31,7 +32,12 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
             };
         }
         
-        var products = await GetProducts(new BaseFilterRequest { CreatedAt = request.Memory.LastInteractionDate, Title = filterRequest.Title });
+        var products = await GetProducts(new BaseFilterRequest
+        {
+            CreatedAt = request.Memory.LastInteractionDate, 
+            Title = filterRequest.Title
+        }, filterRequest.CategoryIds?.ToList());
+        
         return new()
         {
             FlyBird = products.Items.Any(),
@@ -61,7 +67,11 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
         }
 
         var products = await GetProducts(new BaseFilterRequest
-            { UpdatedAt = request.Memory.LastInteractionDate, Title = filterRequest.Title });
+        {
+            UpdatedAt = request.Memory.LastInteractionDate, 
+            Title = filterRequest.Title
+        }, filterRequest.CategoryIds?.ToList());
+        
         products.Items = products.Items.Where(x => x.CreatedAt != x.UpdatedAt).ToList();
             
         return new()
@@ -75,11 +85,33 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
         };
     }
 
-    private async Task<ProductsResponse> GetProducts(BaseFilterRequest request)
+    private async Task<ProductsResponse> GetProducts(BaseFilterRequest request, List<string>? requestedCategoryIds)
     {
         var queryString = BuildQueryString(request);
         var requestUrl = $"/rest/V1/products?searchCriteria{queryString}";
-        return await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
+        var products = await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
+        
+        if (requestedCategoryIds != null)
+        {
+            var result = new List<ProductResponse>();
+            foreach (var productResponse in products.Items)
+            {
+                var categoriesCustomAttribute = productResponse.CustomAttributes.FirstOrDefault(x => x.AttributeCode == "category_ids");
+                if (categoriesCustomAttribute != null)
+                {
+                    var categoryIds = JsonConvert.DeserializeObject<List<string>>(categoriesCustomAttribute.Value)!;
+                    if (requestedCategoryIds.All(id => categoryIds.Contains(id)))
+                    {
+                        result.Add(productResponse);
+                    }
+                }
+            }
+            
+            products.Items = result;
+            products.TotalCount = result.Count;
+        }
+        
+        return products;
     }
     
     protected override string BuildQueryString(BaseFilterRequest filterRequest)
