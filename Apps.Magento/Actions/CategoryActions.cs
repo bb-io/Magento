@@ -9,7 +9,7 @@ using RestSharp;
 
 namespace Apps.Magento.Actions;
 
-[ActionList]
+[ActionList("Category")]
 public class CategoryActions(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
     [Action("Search categories", Description = "Retrieve all categories that match the specified criteria")]

@@ -17,7 +17,7 @@ using RestSharp;
 
 namespace Apps.Magento.Actions;
 
-[ActionList]
+[ActionList("Block")]
 public class BlockActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : AppInvocable(invocationContext)
 {
     [Action("Search blocks", Description = "Retrieve all blocks that match the specified criteria")]
