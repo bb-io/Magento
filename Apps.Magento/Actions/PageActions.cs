@@ -18,7 +18,7 @@ using RestSharp;
 
 namespace Apps.Magento.Actions;
 
-[ActionList]
+[ActionList("Page")]
 public class PageActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : AppInvocable(invocationContext)
 {
     [Action("Search pages", Description = "Retrieve all pages that match the specified criteria")]

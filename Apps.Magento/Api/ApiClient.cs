@@ -2,6 +2,7 @@ using Apps.Magento.Constants;
 using Apps.Magento.Models.Dtos;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Utils.RestSharp;
 using Newtonsoft.Json;
 using RestSharp;
@@ -23,12 +24,12 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> creds)
         try
         {
             var errorDto = JsonConvert.DeserializeObject<ErrorDto>(response.Content!)!;
-            return new Exception(errorDto.ToString());
+            return new PluginApplicationException(errorDto.ToString());
         }
         catch (Exception)
         {
             var errorMessage = $"Status code: {response.StatusCode}, Content: {response.Content}";
-            return new Exception(errorMessage);
+            throw new PluginApplicationException(errorMessage);
         }
     }
 }
