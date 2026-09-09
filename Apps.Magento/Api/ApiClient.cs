@@ -1,3 +1,4 @@
+using System.Net;
 using Apps.Magento.Constants;
 using Apps.Magento.Extensions;
 using Apps.Magento.Models.Dtos;
@@ -17,10 +18,18 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> creds)
 
     protected override Exception ConfigureErrorException(RestResponse response)
     {
+        var statusCode = response.StatusCode;
+        if (statusCode == HttpStatusCode.InternalServerError)
+        {
+            return new PluginApplicationException(
+                $"The Magento instance returned a server error ({statusCode}). This is a problem on the Magento side. " +
+                $"Please check var/log/ and var/report/ on the instance. Details: {response.Content?.SanitizeCurlyBraces()}");
+        }
+        
         var errorDto = TryParseError(response.Content);
         string message = errorDto is not null
             ? errorDto.ToString()
-            : $"Status code: {response.StatusCode}. Content: {response.Content?.SanitizeCurlyBraces()}";
+            : $"Status code: {statusCode}. Content: {response.Content?.SanitizeCurlyBraces()}";
 
         return new PluginApplicationException(message);
     }
