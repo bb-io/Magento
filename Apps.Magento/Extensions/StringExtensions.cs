@@ -4,6 +4,6 @@ public static class StringExtensions
 {
     public static string SanitizeCurlyBraces(this string source)
     {
-        return source.Replace("{", "{{").Replace("}", "}}").Trim();
+        return source.Replace("{", "{{").Replace("}", "}}");
     }
 }

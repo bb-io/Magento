@@ -15,7 +15,7 @@ public class ErrorDto
     
     public override string ToString()
     {
-        var errorMessage = $"Error message: {Message}";
+        string errorMessage = string.IsNullOrWhiteSpace(Message) ? "Unknown error" : $"Error message: {Message}";
         
         if (Parameters != null)
         {

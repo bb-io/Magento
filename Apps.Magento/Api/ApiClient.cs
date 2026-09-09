@@ -23,7 +23,7 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> creds)
         {
             return new PluginApplicationException(
                 $"The Magento instance returned a server error ({statusCode}). This is a problem on the Magento side. " +
-                $"Please check var/log/ and var/report/ on the instance. Details: {response.Content?.SanitizeCurlyBraces()}");
+                $"Please check var/log/ and var/report/ on the instance");
         }
         
         var errorDto = TryParseError(response.Content);
