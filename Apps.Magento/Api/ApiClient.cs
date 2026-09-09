@@ -1,4 +1,6 @@
+using System.Net;
 using Apps.Magento.Constants;
+using Apps.Magento.Extensions;
 using Apps.Magento.Models.Dtos;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common.Authentication;
@@ -16,20 +18,34 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> creds)
 
     protected override Exception ConfigureErrorException(RestResponse response)
     {
-        return ConfigureException(response);
-    }
+        var statusCode = response.StatusCode;
+        if (statusCode == HttpStatusCode.InternalServerError)
+        {
+            return new PluginApplicationException(
+                $"The Magento instance returned a server error ({statusCode}). This is a problem on the Magento side. " +
+                $"Please check var/log/ and var/report/ on the instance");
+        }
+        
+        var errorDto = TryParseError(response.Content);
+        string message = errorDto is not null
+            ? errorDto.ToString()
+            : $"Status code: {statusCode}. Content: {response.Content?.SanitizeCurlyBraces()}";
 
-    private Exception ConfigureException(RestResponse response)
+        return new PluginApplicationException(message);
+    }
+    
+    private static ErrorDto? TryParseError(string? content)
     {
+        if (string.IsNullOrWhiteSpace(content))
+            return null;
+
         try
         {
-            var errorDto = JsonConvert.DeserializeObject<ErrorDto>(response.Content!)!;
-            return new PluginApplicationException(errorDto.ToString());
+            return JsonConvert.DeserializeObject<ErrorDto>(content);
         }
-        catch (Exception)
+        catch (JsonException)
         {
-            var errorMessage = $"Status code: {response.StatusCode}, Content: {response.Content}";
-            throw new PluginApplicationException(errorMessage);
+            return null;
         }
     }
 }

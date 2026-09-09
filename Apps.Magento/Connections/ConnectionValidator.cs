@@ -5,7 +5,7 @@ using RestSharp;
 
 namespace Apps.Magento.Connections;
 
-public class ConnectionValidator: IConnectionValidator
+public class ConnectionValidator : IConnectionValidator
 {
     public async ValueTask<ConnectionValidationResponse> ValidateConnection(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
