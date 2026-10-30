@@ -1,4 +1,3 @@
-using Apps.Magento.Api;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Dtos;
 using Blackbird.Applications.Sdk.Common.Dynamic;
@@ -11,7 +10,7 @@ public class AttributeSetDataSource(InvocationContext invocationContext) : AppIn
 {
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var request = new ApiRequest("/rest/V1/eav/attribute-sets/list?searchCriteria", Method.Get, Creds);
+        var request = new RestRequest("V1/eav/attribute-sets/list?searchCriteria");
         var storeViews = await Client.ExecuteWithErrorHandling<AttributeSetPaginationDto>(request);
         return storeViews.Items
             .Where(x => context.SearchString == null || BuildReadableName(x).Contains(context.SearchString))

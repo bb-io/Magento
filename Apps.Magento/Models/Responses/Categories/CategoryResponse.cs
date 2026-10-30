@@ -1,18 +1,19 @@
+using Apps.Magento.Models.Entities.Categories;
 using Blackbird.Applications.Sdk.Common;
 
 namespace Apps.Magento.Models.Responses.Categories;
 
-public class CategoryResponse
+public class CategoryResponse(CategoryEntity entity)
 {
-    [Display("Category ID")] 
-    public string Id { get; set; } = string.Empty;
+    [Display("Category ID")]
+    public string Id { get; set; } = entity.Id;
+    
+    [Display("Category name")]
+    public string Name { get; set; } = entity.Name;
     
     [Display("Parent ID")]
-    public string ParentId { get; set; } = string.Empty;
+    public string ParentId { get; set; } = entity.ParentId;
 
-    [Display("Category name")] 
-    public string Name { get; set; } = string.Empty;
-
-    [Display("Is active")]
-    public bool IsActive { get; set; }
+    [Display("Category is active")]
+    public bool IsActive { get; set; } = entity.IsActive;
 }

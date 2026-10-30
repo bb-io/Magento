@@ -1,7 +1,5 @@
 using System.Text;
-using Apps.Magento.Api;
 using Apps.Magento.Invocables;
-using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Responses.Pages;
 using Apps.Magento.Polling.Models;
@@ -72,14 +70,14 @@ public class PagePollingList(InvocationContext invocationContext) : AppInvocable
         };
     }
     
-    private async Task<PagesResponse> GetPages(BaseFilterRequest filter)
+    private Task<PagesResponse> GetPages(BaseFilterRequest filter)
     {
         var queryString = BuildQueryString(filter);
-        var requestUrl = $"/rest/V1/cmsPage/search?searchCriteria{queryString}";
-        return await Client.ExecuteWithErrorHandling<PagesResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
+        var request = new RestRequest($"V1/cmsPage/search?searchCriteria{queryString}");
+        return Client.ExecuteWithErrorHandling<PagesResponse>(request);
     }
     
-    protected override string BuildQueryString(BaseFilterRequest filterRequest)
+    protected string BuildQueryString(BaseFilterRequest filterRequest)
     {
         var queryString = new StringBuilder();
         var filterIndex = 0;

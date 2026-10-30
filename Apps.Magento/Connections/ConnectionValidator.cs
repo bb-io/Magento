@@ -1,6 +1,7 @@
 ﻿using Apps.Magento.Api;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using RestSharp;
 
 namespace Apps.Magento.Connections;
@@ -16,13 +17,13 @@ public class ConnectionValidator : IConnectionValidator
         
         try
         {
-            await apiClient.ExecuteWithErrorHandling(new ApiRequest("/rest/V1/analytics/link", Method.Get, credentialsProviders));
+            await apiClient.ExecuteWithErrorHandling(new RestRequest("V1/store/storeViews"));
             return new ConnectionValidationResponse
             {
                 IsValid = true
             };
         }
-        catch (Exception e)
+        catch (PluginApplicationException e)
         {
             return new ConnectionValidationResponse
             {

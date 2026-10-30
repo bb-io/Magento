@@ -1,17 +1,18 @@
-using System.Text;
-using Apps.Magento.Api;
 using Apps.Magento.Constants;
+using Apps.Magento.Extensions;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Dtos;
+using Apps.Magento.Models.Entities.Products;
 using Apps.Magento.Models.Identifiers;
-using Apps.Magento.Models.Requests;
+using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Requests.Products;
-using Apps.Magento.Models.Responses.Categories;
+using Apps.Magento.Models.Responses;
 using Apps.Magento.Models.Responses.Products;
 using Apps.Magento.Utils;
+using Apps.Magento.Utils.Converters;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Newtonsoft.Json;
@@ -23,75 +24,55 @@ namespace Apps.Magento.Actions;
 public class ProductActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : AppInvocable(invocationContext)
 {
-    [Action("Search products", Description = "Retrieve all products that match the specified criteria")]
-    public async Task<ProductsResponse> GetAllProductsAsync(
+    [Action("Search products", Description = "Search products by specific criteria")]
+    public async Task<SearchProductsResponse> SearchProducts(
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] FilterProductRequest filterRequest)
+        [ActionParameter] SearchProductsRequest input)
     {
-        var queryString = BuildQueryString(filterRequest);
-        var requestUrl = $"/rest/{storeViewIdentifier}/V1/products?searchCriteria{queryString}";
-        var products = await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
-
-        if (filterRequest.CategoryIds != null)
-        {
-            var result = new List<ProductResponse>();
-            foreach (var productResponse in products.Items)
-            {
-                var categoriesCustomAttribute = productResponse.CustomAttributes.FirstOrDefault(x => x.AttributeCode == "category_ids");
-                if (categoriesCustomAttribute != null)
-                {
-                    var categoryIds = JsonConvert.DeserializeObject<List<string>>(categoriesCustomAttribute.Value)!;
-                    if (filterRequest.CategoryIds.All(id => categoryIds.Contains(id)))
-                    {
-                        result.Add(productResponse);
-                    }
-                }
-            }
-            
-            products.Items = result;
-            products.TotalCount = result.Count;
-        }
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereContains(("name", input.NameContains))
+            .WhereLessThan(("created_at", input.CreatedBefore))
+            .WhereGreaterThan(("created_at", input.CreatedAfter))
+            .WhereLessThan(("updated_at", input.UpdatedBefore))
+            .WhereGreaterThan(("updated_at", input.UpdatedAfter))
+            .ApplyTo(new RestRequest($"{storeViewIdentifier}/V1/products"));
         
-        return products;
+        var products = await Client.Paginate<ProductEntity>(request);
+
+        if (input.CategoryIds != null)
+            products = products.Where(x => x.IsInAllCategories(input.CategoryIds));
+
+        var responses = products.Select(x => new ProductResponse(x)).ToList();
+        return new(responses);
     }
 
     [Action("Get product", Description = "Get product by specified SKU")]
-    public async Task<ProductWithCategoriesResponse> GetProductBySkuAsync(
+    public async Task<ProductWithCategoriesResponse> GetProduct(
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
         [ActionParameter] ProductIdentifier identifier)
     {
-        var product = await Client.ExecuteWithErrorHandling<ProductResponse>(
-            new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Get, Creds));
+        var product = await Client.GetProduct(identifier.Sku, storeViewIdentifier.StoreView);
+
+        var getCategoryTasks = product.ExtensionAttributes.CategoryLinks.Select(x => Client.GetCategory(x.CategoryId));
+        var categories = await Task.WhenAll(getCategoryTasks);
+        var categoryNames = categories.Select(x => x.Name).ToList();
         
-        var categoryActions = new CategoryActions(InvocationContext);
-        var categories = new CategoriesResponse();
-        
-        foreach(var category in product.ExtensionAttributes.CategoryLinks)
-        {
-            var categoryResponse = await categoryActions.GetCategoryAsync(new()
-            {
-                CategoryId = category.CategoryId
-            });
-            categories.Items.Add(categoryResponse);
-        }
-        
-        return new ProductWithCategoriesResponse(product)
-        {
-            CategoryNames = categories.Items.Select(x => x.Name).ToList()
-        };
+        return new(product, categoryNames);
     }
 
-    [Action("Get product as HTML", Description = "Get product by specified SKU as HTML")]
-    public async Task<FileReference> GetProductBySkuAsHtmlAsync(
+    [Action("Download product", Description = "Download product content")]
+    public async Task<FileResponse> DownloadProduct(
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] ProductIdentifier identifier,
-        [ActionParameter] GetProductAsHtmlRequest getProductAsHtmlRequest)
+        [ActionParameter] ProductIdentifier productIdentifier,
+        [ActionParameter] DownloadProductRequest downloadProductRequest)
     {
-        var product = await GetProductBySkuAsync(storeViewIdentifier, identifier);
-        var html = HtmlHelper.GenerateProductHtmlContent(product,
-            getProductAsHtmlRequest.CustomAttributes?.ToList() ?? null);
-        var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Page, identifier.Sku, html);
-        return await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{identifier.Sku}.html");
+        var product = await Client.GetProduct(productIdentifier.Sku, storeViewIdentifier.StoreView);
+        
+        var html = ProductConverter.ToHtml(product, downloadProductRequest.CustomAttributes?.ToList());
+        var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Product, productIdentifier.Sku, html);
+        
+        var file = await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{productIdentifier.Sku}.html");
+        return new(file);
     }
 
     [Action("Create product", Description = "Create product with specified data")]
@@ -127,8 +108,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         };
 
-        var request = new ApiRequest("/rest/V1/products", Method.Post, Creds)
-            .AddBody(body);
+        var request = new RestRequest("V1/products", Method.Post).AddBody(body);
         return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
     }
 
@@ -146,7 +126,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         }
 
-        var product = await GetProductBySkuAsync(new StoreViewOptionalIdentifier { StoreView = storeViewIdentifier.StoreView == "all" ? "default" : storeViewIdentifier.StoreView }, identifier);
+        var product = await GetProduct(new StoreViewOptionalIdentifier { StoreView = storeViewIdentifier.StoreView == "all" ? "default" : storeViewIdentifier.StoreView }, identifier);
         
         if(updateProductRequest.CustomAttributeKeys != null && updateProductRequest.CustomAttributeValues != null)
         {
@@ -185,89 +165,52 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         };
         
-        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put, Creds)
-            .AddBody(body);
+        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put).AddBody(body);
         return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
     }
 
-    [Action("Update product from HTML", Description = "Update product by specified SKU with HTML content")]
-    public async Task<ProductResponse> UpdateProductBySkuAsHtmlAsync(
+    [Action("Upload product", Description = "Upload content of a specific product")]
+    public async Task UploadProduct(
         [ActionParameter] StoreViewWithAllOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] UpdateProductAsHtmlRequest updateProductAsHtmlRequest)
+        [ActionParameter] UploadProductRequest input,
+        [ActionParameter] ProductOptionalIdentifier productIdentifier)
     {
-        var htmlStream = await fileManagementClient.DownloadAsync(updateProductAsHtmlRequest.File);
-        var html = await new StreamReader(htmlStream).ReadToEndAsync();
+        var htmlStream = await fileManagementClient.DownloadAsync(input.File);
+        string html = await new StreamReader(htmlStream).ReadToEndAsync();
         
         var htmlModel = HtmlHelper.ConvertFromHtml(html);
-        var productModel = HtmlHelper.ParseCustomAttributesFromHtml(html);
+        var productModel = ProductConverter.FromHtml(html);
         
-        var productSku = updateProductAsHtmlRequest.ProductSku ?? htmlModel.ResourceId ??
-            throw new ArgumentException(
-                "Couldn't find product SKU in the HTML document. Please specify it manually in the optional input.");
-        var product = await GetProductBySkuAsync(new StoreViewOptionalIdentifier { StoreView = storeViewIdentifier.StoreView == "all" ? "default" : storeViewIdentifier.StoreView }, new ProductIdentifier { Sku = productSku });
+        string productSku = productIdentifier.Sku ?? 
+                            htmlModel.ResourceId ?? 
+                            throw new PluginMisconfigurationException(
+                                "Couldn't find product SKU in the file. Please specify it manually in the optional input.");
         
-        foreach (var customAttribute in productModel.CustomAttributes)
-        {
-            var existingAttribute =
-                product.CustomAttributes.FirstOrDefault(x => x.AttributeCode == customAttribute.AttributeCode);
-            
-            if (existingAttribute != null)
-            {
-                existingAttribute.Value = customAttribute.Value;
-            }
-            else
-            {
-                product.CustomAttributes.Add(customAttribute);
-            }
-        }
+        var product = await Client.GetProduct(productSku, storeViewIdentifier.ReadStoreView());
 
-        var appropriateCustomAttributes = product.CustomAttributes.Select(x =>
-        {
-            if (IsArrayString(x.Value))
-            {
-                var list = JsonConvert.DeserializeObject<List<string>>(x.Value)!
-                    .ToList();
-                return new CustomAttributeDto(x.AttributeCode, list);
-            }
-        
-            return new CustomAttributeDto(x.AttributeCode, x.Value);
-        }).ToList();
-        
+        var customAttributes = productModel.CustomAttributes.Select(x => x.Value.IsArrayString()
+            ? new CustomAttributeDto(x.AttributeCode, JsonConvert.DeserializeObject<List<string>>(x.Value)!)
+            : new CustomAttributeDto(x.AttributeCode, x.Value));
+
         var body = new
         {
             product = new
             {
-                sku = product.Sku,
-                name = productModel.Name ?? product.Name,
-                attribute_set_id = int.Parse(product.AttributeSetId),
-                price = product.Price,
-                status = product.Status,
-                visibility = product.Visibility,
-                type_id = product.TypeId,
-                weight = product.Weight,
-                extension_attributes = new
-                {
-                    category_links = new List<object>()
-                },
-                custom_attributes = appropriateCustomAttributes.Select(x => new
-                {
-                    attribute_code = x.AttributeCode,
-                    value = x.Value
-                })
+                sku = productSku,
+                name = string.IsNullOrWhiteSpace(productModel.Name) ? product.Name : productModel.Name,
+                custom_attributes = customAttributes.Select(x => new { attribute_code = x.AttributeCode, value = x.Value })
             }
         };
 
-        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{productSku}", Method.Put, Creds)
-            .AddBody(body);
-        return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
+        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{productSku}", Method.Put).AddJsonBody(body);
+        await Client.ExecuteWithErrorHandling<ProductEntity>(request);
     }
 
     [Action("Delete product", Description = "Delete product by specified SKU")]
     public async Task DeleteProductBySkuAsync([ActionParameter] ProductIdentifier identifier)
     {
-        var endpoint = $"/rest/V1/products/{identifier.Sku}";
-        await Client.ExecuteWithErrorHandling(
-            new ApiRequest(endpoint, Method.Delete, Creds));
+        var endpoint = $"V1/products/{identifier.Sku}";
+        await Client.ExecuteWithErrorHandling(new RestRequest(endpoint, Method.Delete));
     }
     
     [Action("Add custom attribute", Description = "Add custom attribute to product by specified SKU")]
@@ -276,7 +219,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] ProductIdentifier identifier,
         [ActionParameter] AddCustomAttributeRequest customAttributeDto)
     {
-        var product = await GetProductBySkuAsync(storeViewIdentifier, identifier);
+        var product = await Client.GetProduct(identifier.Sku, storeViewIdentifier.StoreView);
         product.CustomAttributes.Add(new CustomAttribute
         {
             AttributeCode = customAttributeDto.AttributeCode,
@@ -285,7 +228,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
 
         var appropriateCustomAttributes = product.CustomAttributes.Select(x =>
         {
-            if (IsArrayString(x.Value))
+            if (x.Value.IsArrayString())
             {
                 var list = JsonConvert.DeserializeObject<List<string>>(x.Value)!
                     .ToList();
@@ -301,7 +244,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             {
                 sku = product.Sku,
                 name = product.Name,
-                attribute_set_id = int.Parse(product.AttributeSetId),
+                attribute_set_id = product.AttributeSetId,
                 price = product.Price,
                 status = product.Status,
                 visibility = product.Visibility,
@@ -319,54 +262,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         };
 
-        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put, Creds)
-            .AddBody(body);
+        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put).AddBody(body);
         return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
-    }
-
-    protected override string BuildQueryString(BaseFilterRequest filterRequest)
-    {
-        var queryString = new StringBuilder();
-        var filterIndex = 0;
-
-        if (!string.IsNullOrEmpty(filterRequest.Title))
-        {
-            queryString.Append($"[filterGroups][{filterIndex}][filters][0][field]={Uri.EscapeDataString("name")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][value]={Uri.EscapeDataString($"%{filterRequest.Title}%")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][conditionType]={Uri.EscapeDataString("like")}");
-
-            filterIndex += 1;
-        }
-                
-        if (filterRequest.CreatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("created_at")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        if (filterRequest.UpdatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("updated_at")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        return queryString.ToString();
-    }
-    
-    private bool IsArrayString(string value)
-    {
-        return value.StartsWith("[") && value.EndsWith("]");
     }
 }
