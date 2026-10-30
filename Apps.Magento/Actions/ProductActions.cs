@@ -1,11 +1,13 @@
 using System.Text;
 using Apps.Magento.Constants;
+using Apps.Magento.Extensions;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Dtos;
+using Apps.Magento.Models.Entities.Products;
 using Apps.Magento.Models.Identifiers;
+using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Requests.Products;
-using Apps.Magento.Models.Responses.Categories;
 using Apps.Magento.Models.Responses.Products;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common;
@@ -22,62 +24,40 @@ namespace Apps.Magento.Actions;
 public class ProductActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : AppInvocable(invocationContext)
 {
-    [Action("Search products", Description = "Retrieve all products that match the specified criteria")]
-    public async Task<ProductsResponse> GetAllProductsAsync(
+    [Action("Search products", Description = "Search products by specific criteria")]
+    public async Task<SearchProductsResponse> SearchProducts(
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] FilterProductRequest filterRequest)
+        [ActionParameter] SearchProductsRequest input)
     {
-        var queryString = BuildQueryString(filterRequest);
-        var request = new RestRequest($"{storeViewIdentifier}/V1/products?searchCriteria{queryString}");
-        var products = await Client.ExecuteWithErrorHandling<ProductsResponse>(request);
-
-        if (filterRequest.CategoryIds != null)
-        {
-            var result = new List<ProductResponse>();
-            foreach (var productResponse in products.Items)
-            {
-                var categoriesCustomAttribute = productResponse.CustomAttributes.FirstOrDefault(x => x.AttributeCode == "category_ids");
-                if (categoriesCustomAttribute != null)
-                {
-                    var categoryIds = JsonConvert.DeserializeObject<List<string>>(categoriesCustomAttribute.Value)!;
-                    if (filterRequest.CategoryIds.All(id => categoryIds.Contains(id)))
-                    {
-                        result.Add(productResponse);
-                    }
-                }
-            }
-            
-            products.Items = result;
-            products.TotalCount = result.Count;
-        }
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereContains(("name", input.Name))
+            .WhereLessThan(("created_at", input.CreatedBefore))
+            .WhereGreaterThan(("created_at", input.CreatedAfter))
+            .WhereLessThan(("updated_at", input.UpdatedBefore))
+            .WhereGreaterThan(("updated_at", input.UpdatedAfter))
+            .ApplyTo(new RestRequest($"{storeViewIdentifier}/V1/products"));
         
-        return products;
+        var products = await Client.Paginate<ProductEntity>(request);
+
+        if (input.CategoryIds != null)
+            products = products.Where(x => x.IsInAllCategories(input.CategoryIds));
+
+        var responses = products.Select(x => new ProductResponse(x)).ToList();
+        return new(responses);
     }
 
     [Action("Get product", Description = "Get product by specified SKU")]
-    public async Task<ProductWithCategoriesResponse> GetProductBySkuAsync(
+    public async Task<ProductWithCategoriesResponse> GetProduct(
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
         [ActionParameter] ProductIdentifier identifier)
     {
-        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}");
-        var product = await Client.ExecuteWithErrorHandling<ProductResponse>(request);
+        var product = await Client.GetProduct(identifier.Sku, storeViewIdentifier.StoreView);
+
+        var getCategoryTasks = product.ExtensionAttributes.CategoryLinks.Select(x => Client.GetCategory(x.CategoryId));
+        var categories = await Task.WhenAll(getCategoryTasks);
+        var categoryNames = categories.Select(x => x.Name).ToList();
         
-        var categoryActions = new CategoryActions(InvocationContext);
-        var categories = new CategoriesResponse();
-        
-        foreach(var category in product.ExtensionAttributes.CategoryLinks)
-        {
-            var categoryResponse = await categoryActions.GetCategoryAsync(new()
-            {
-                CategoryId = category.CategoryId
-            });
-            categories.Items.Add(categoryResponse);
-        }
-        
-        return new ProductWithCategoriesResponse(product)
-        {
-            CategoryNames = categories.Items.Select(x => x.Name).ToList()
-        };
+        return new(product, categoryNames);
     }
 
     [Action("Get product as HTML", Description = "Get product by specified SKU as HTML")]
@@ -86,7 +66,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] ProductIdentifier identifier,
         [ActionParameter] GetProductAsHtmlRequest getProductAsHtmlRequest)
     {
-        var product = await GetProductBySkuAsync(storeViewIdentifier, identifier);
+        var product = await GetProduct(storeViewIdentifier, identifier);
         var html = HtmlHelper.GenerateProductHtmlContent(product,
             getProductAsHtmlRequest.CustomAttributes?.ToList() ?? null);
         var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Page, identifier.Sku, html);
@@ -144,7 +124,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         }
 
-        var product = await GetProductBySkuAsync(new StoreViewOptionalIdentifier { StoreView = storeViewIdentifier.StoreView == "all" ? "default" : storeViewIdentifier.StoreView }, identifier);
+        var product = await GetProduct(new StoreViewOptionalIdentifier { StoreView = storeViewIdentifier.StoreView == "all" ? "default" : storeViewIdentifier.StoreView }, identifier);
         
         if(updateProductRequest.CustomAttributeKeys != null && updateProductRequest.CustomAttributeValues != null)
         {
@@ -201,7 +181,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         var productSku = updateProductAsHtmlRequest.ProductSku ?? htmlModel.ResourceId ??
             throw new ArgumentException(
                 "Couldn't find product SKU in the HTML document. Please specify it manually in the optional input.");
-        var product = await GetProductBySkuAsync(new StoreViewOptionalIdentifier { StoreView = storeViewIdentifier.StoreView == "all" ? "default" : storeViewIdentifier.StoreView }, new ProductIdentifier { Sku = productSku });
+        var product = await Client.GetProduct(productSku, storeViewIdentifier.StoreView == "all" ? "default" : storeViewIdentifier.StoreView);
         
         foreach (var customAttribute in productModel.CustomAttributes)
         {
@@ -236,7 +216,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             {
                 sku = product.Sku,
                 name = productModel.Name ?? product.Name,
-                attribute_set_id = int.Parse(product.AttributeSetId),
+                attribute_set_id = product.AttributeSetId,
                 price = product.Price,
                 status = product.Status,
                 visibility = product.Visibility,
@@ -271,7 +251,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] ProductIdentifier identifier,
         [ActionParameter] AddCustomAttributeRequest customAttributeDto)
     {
-        var product = await GetProductBySkuAsync(storeViewIdentifier, identifier);
+        var product = await Client.GetProduct(identifier.Sku, storeViewIdentifier.StoreView);
         product.CustomAttributes.Add(new CustomAttribute
         {
             AttributeCode = customAttributeDto.AttributeCode,
@@ -296,7 +276,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             {
                 sku = product.Sku,
                 name = product.Name,
-                attribute_set_id = int.Parse(product.AttributeSetId),
+                attribute_set_id = product.AttributeSetId,
                 price = product.Price,
                 status = product.Status,
                 visibility = product.Visibility,
