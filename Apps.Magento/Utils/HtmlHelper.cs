@@ -1,6 +1,7 @@
 using System.Text;
 using System.Web;
 using Apps.Magento.Models;
+using Apps.Magento.Models.Entities.Products;
 using Apps.Magento.Models.Responses.Products;
 using HtmlAgilityPack;
 

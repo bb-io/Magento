@@ -1,4 +1,4 @@
-using Apps.Magento.Models.Responses.Products;
+using Apps.Magento.Models.Entities.Products;
 
 namespace Apps.Magento.Models;
 
