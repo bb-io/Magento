@@ -6,8 +6,8 @@ namespace Apps.Magento.Models.Requests.Products;
 
 public class SearchProductsRequest
 {
-    [Display("Name")]
-    public string? Name { get; set; }
+    [Display("Name contains")]
+    public string? NameContains { get; set; }
     
     [Display("Created after")]
     public DateTime? CreatedAfter { get; set; }

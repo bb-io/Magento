@@ -1,4 +1,3 @@
-using System.Text;
 using Apps.Magento.Constants;
 using Apps.Magento.Extensions;
 using Apps.Magento.Invocables;
@@ -6,13 +5,14 @@ using Apps.Magento.Models.Dtos;
 using Apps.Magento.Models.Entities.Products;
 using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Identifiers.Optional;
-using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Requests.Products;
+using Apps.Magento.Models.Responses;
 using Apps.Magento.Models.Responses.Products;
 using Apps.Magento.Utils;
+using Apps.Magento.Utils.Converters;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Newtonsoft.Json;
@@ -30,7 +30,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] SearchProductsRequest input)
     {
         RestRequest request = new SearchCriteriaBuilder()
-            .WhereContains(("name", input.Name))
+            .WhereContains(("name", input.NameContains))
             .WhereLessThan(("created_at", input.CreatedBefore))
             .WhereGreaterThan(("created_at", input.CreatedAfter))
             .WhereLessThan(("updated_at", input.UpdatedBefore))
@@ -60,17 +60,19 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         return new(product, categoryNames);
     }
 
-    [Action("Get product as HTML", Description = "Get product by specified SKU as HTML")]
-    public async Task<FileReference> GetProductBySkuAsHtmlAsync(
+    [Action("Download product", Description = "Download product content")]
+    public async Task<FileResponse> DownloadProduct(
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] ProductIdentifier identifier,
-        [ActionParameter] GetProductAsHtmlRequest getProductAsHtmlRequest)
+        [ActionParameter] ProductIdentifier productIdentifier,
+        [ActionParameter] DownloadProductRequest downloadProductRequest)
     {
-        var product = await GetProduct(storeViewIdentifier, identifier);
-        var html = HtmlHelper.GenerateProductHtmlContent(product,
-            getProductAsHtmlRequest.CustomAttributes?.ToList() ?? null);
-        var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Page, identifier.Sku, html);
-        return await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{identifier.Sku}.html");
+        var product = await Client.GetProduct(productIdentifier.Sku, storeViewIdentifier.StoreView);
+        
+        var html = ProductConverter.ToHtml(product, downloadProductRequest.CustomAttributes?.ToList());
+        var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Product, productIdentifier.Sku, html);
+        
+        var file = await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{productIdentifier.Sku}.html");
+        return new(file);
     }
 
     [Action("Create product", Description = "Create product with specified data")]
@@ -167,75 +169,41 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
     }
 
-    [Action("Update product from HTML", Description = "Update product by specified SKU with HTML content")]
-    public async Task<ProductResponse> UpdateProductBySkuAsHtmlAsync(
+    [Action("Upload product", Description = "Upload content of a specific product")]
+    public async Task UploadProduct(
         [ActionParameter] StoreViewWithAllOptionalIdentifier storeViewIdentifier,
-        [ActionParameter] UpdateProductAsHtmlRequest updateProductAsHtmlRequest)
+        [ActionParameter] UploadProductRequest input,
+        [ActionParameter] ProductOptionalIdentifier productIdentifier)
     {
-        var htmlStream = await fileManagementClient.DownloadAsync(updateProductAsHtmlRequest.File);
-        var html = await new StreamReader(htmlStream).ReadToEndAsync();
+        var htmlStream = await fileManagementClient.DownloadAsync(input.File);
+        string html = await new StreamReader(htmlStream).ReadToEndAsync();
         
         var htmlModel = HtmlHelper.ConvertFromHtml(html);
-        var productModel = HtmlHelper.ParseCustomAttributesFromHtml(html);
+        var productModel = ProductConverter.FromHtml(html);
         
-        var productSku = updateProductAsHtmlRequest.ProductSku ?? htmlModel.ResourceId ??
-            throw new ArgumentException(
-                "Couldn't find product SKU in the HTML document. Please specify it manually in the optional input.");
-        var product = await Client.GetProduct(productSku, storeViewIdentifier.StoreView == "all" ? "default" : storeViewIdentifier.StoreView);
+        string productSku = productIdentifier.Sku ?? 
+                            htmlModel.ResourceId ?? 
+                            throw new PluginMisconfigurationException(
+                                "Couldn't find product SKU in the file. Please specify it manually in the optional input.");
         
-        foreach (var customAttribute in productModel.CustomAttributes)
-        {
-            var existingAttribute =
-                product.CustomAttributes.FirstOrDefault(x => x.AttributeCode == customAttribute.AttributeCode);
-            
-            if (existingAttribute != null)
-            {
-                existingAttribute.Value = customAttribute.Value;
-            }
-            else
-            {
-                product.CustomAttributes.Add(customAttribute);
-            }
-        }
+        var product = await Client.GetProduct(productSku, storeViewIdentifier.ReadStoreView());
 
-        var appropriateCustomAttributes = product.CustomAttributes.Select(x =>
-        {
-            if (IsArrayString(x.Value))
-            {
-                var list = JsonConvert.DeserializeObject<List<string>>(x.Value)!
-                    .ToList();
-                return new CustomAttributeDto(x.AttributeCode, list);
-            }
-        
-            return new CustomAttributeDto(x.AttributeCode, x.Value);
-        }).ToList();
-        
+        var customAttributes = productModel.CustomAttributes.Select(x => x.Value.IsArrayString()
+            ? new CustomAttributeDto(x.AttributeCode, JsonConvert.DeserializeObject<List<string>>(x.Value)!)
+            : new CustomAttributeDto(x.AttributeCode, x.Value));
+
         var body = new
         {
             product = new
             {
-                sku = product.Sku,
-                name = productModel.Name ?? product.Name,
-                attribute_set_id = product.AttributeSetId,
-                price = product.Price,
-                status = product.Status,
-                visibility = product.Visibility,
-                type_id = product.TypeId,
-                weight = product.Weight,
-                extension_attributes = new
-                {
-                    category_links = new List<object>()
-                },
-                custom_attributes = appropriateCustomAttributes.Select(x => new
-                {
-                    attribute_code = x.AttributeCode,
-                    value = x.Value
-                })
+                sku = productSku,
+                name = string.IsNullOrWhiteSpace(productModel.Name) ? product.Name : productModel.Name,
+                custom_attributes = customAttributes.Select(x => new { attribute_code = x.AttributeCode, value = x.Value })
             }
         };
 
-        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{productSku}", Method.Put).AddBody(body);
-        return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
+        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{productSku}", Method.Put).AddJsonBody(body);
+        await Client.ExecuteWithErrorHandling<ProductEntity>(request);
     }
 
     [Action("Delete product", Description = "Delete product by specified SKU")]
@@ -260,7 +228,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
 
         var appropriateCustomAttributes = product.CustomAttributes.Select(x =>
         {
-            if (IsArrayString(x.Value))
+            if (x.Value.IsArrayString())
             {
                 var list = JsonConvert.DeserializeObject<List<string>>(x.Value)!
                     .ToList();
@@ -296,51 +264,5 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
 
         var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put).AddBody(body);
         return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
-    }
-
-    protected override string BuildQueryString(BaseFilterRequest filterRequest)
-    {
-        var queryString = new StringBuilder();
-        var filterIndex = 0;
-
-        if (!string.IsNullOrEmpty(filterRequest.Title))
-        {
-            queryString.Append($"[filterGroups][{filterIndex}][filters][0][field]={Uri.EscapeDataString("name")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][value]={Uri.EscapeDataString($"%{filterRequest.Title}%")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][conditionType]={Uri.EscapeDataString("like")}");
-
-            filterIndex += 1;
-        }
-                
-        if (filterRequest.CreatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("created_at")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        if (filterRequest.UpdatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("updated_at")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        return queryString.ToString();
-    }
-    
-    private bool IsArrayString(string value)
-    {
-        return value.StartsWith("[") && value.EndsWith("]");
     }
 }

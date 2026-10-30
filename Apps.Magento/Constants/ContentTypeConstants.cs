@@ -2,7 +2,7 @@ namespace Apps.Magento.Constants;
 
 public static class ContentTypeConstants
 {
-    public static string Page = "cms_page";
-    
-    public static string Block = "cms_block";
+    public const string Page = "cms_page";
+    public const string Product = "product";
+    public const string Block = "cms_block";
 }
