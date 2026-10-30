@@ -107,7 +107,7 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
         await Client.ExecuteWithErrorHandling(request);
     }
     
-    protected override string BuildQueryString(BaseFilterRequest filterRequest)
+    protected string BuildQueryString(BaseFilterRequest filterRequest)
     {
         var queryString = new StringBuilder();
         var filterIndex = 0;

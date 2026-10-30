@@ -128,7 +128,7 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
         return Client.ExecuteWithErrorHandling(new RestRequest($"V1/cmsPage/{identifier.PageId}", Method.Delete));
     }
     
-    protected override string BuildQueryString(BaseFilterRequest filterRequest)
+    protected string BuildQueryString(BaseFilterRequest filterRequest)
     {
         var queryString = new StringBuilder();
         var filterIndex = 0;

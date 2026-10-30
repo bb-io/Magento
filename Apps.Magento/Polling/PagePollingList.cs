@@ -77,7 +77,7 @@ public class PagePollingList(InvocationContext invocationContext) : AppInvocable
         return Client.ExecuteWithErrorHandling<PagesResponse>(request);
     }
     
-    protected override string BuildQueryString(BaseFilterRequest filterRequest)
+    protected string BuildQueryString(BaseFilterRequest filterRequest)
     {
         var queryString = new StringBuilder();
         var filterIndex = 0;

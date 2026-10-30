@@ -77,7 +77,7 @@ public class BlockPollingList(InvocationContext invocationContext) : AppInvocabl
         return Client.ExecuteWithErrorHandling<BlocksResponse>(request);
     }
     
-    protected override string BuildQueryString(BaseFilterRequest filterRequest)
+    protected string BuildQueryString(BaseFilterRequest filterRequest)
     {
         var queryString = new StringBuilder();
         var filterIndex = 0;
