@@ -1,4 +1,5 @@
 using System.Net;
+using Apps.Magento.Authenticators;
 using Apps.Magento.Constants;
 using Apps.Magento.Extensions;
 using Apps.Magento.Models.Dtos;
@@ -11,8 +12,13 @@ using RestSharp;
 
 namespace Apps.Magento.Api;
 
-public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> creds)
-    : BlackBirdRestClient(new RestClientOptions { BaseUrl = new Uri(creds.GetUrl()), ThrowOnAnyError = false })
+public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> creds) 
+    : BlackBirdRestClient(new RestClientOptions
+    {
+        BaseUrl = new Uri($"{creds.GetUrl()}/rest"),
+        ThrowOnAnyError = false,
+        Authenticator = new MagentoOAuth1Authenticator(creds)
+    })
 {
     protected override JsonSerializerSettings JsonSettings => JsonConfig.JsonSettings;
 

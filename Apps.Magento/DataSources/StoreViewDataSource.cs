@@ -1,4 +1,3 @@
-using Apps.Magento.Api;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Dtos;
 using Blackbird.Applications.Sdk.Common.Dynamic;
@@ -11,7 +10,7 @@ public class StoreViewDataSource(InvocationContext invocationContext) : AppInvoc
 {
     public virtual async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var request = new ApiRequest("/rest/V1/store/storeViews", Method.Get, Creds);
+        var request = new RestRequest("V1/store/storeViews");
         var storeViews = await Client.ExecuteWithErrorHandling<List<StoreViewDto>>(request);
         return storeViews
             .Where(x => context.SearchString == null || x.Name.Contains(context.SearchString))

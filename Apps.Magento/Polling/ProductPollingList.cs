@@ -1,5 +1,4 @@
 using System.Text;
-using Apps.Magento.Api;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Responses.Products;
@@ -85,11 +84,11 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
         };
     }
 
-    private async Task<ProductsResponse> GetProducts(BaseFilterRequest request, List<string>? requestedCategoryIds)
+    private async Task<ProductsResponse> GetProducts(BaseFilterRequest input, List<string>? requestedCategoryIds)
     {
-        var queryString = BuildQueryString(request);
-        var requestUrl = $"/rest/V1/products?searchCriteria{queryString}";
-        var products = await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
+        var queryString = BuildQueryString(input);
+        var request = new RestRequest($"V1/products?searchCriteria{queryString}");
+        var products = await Client.ExecuteWithErrorHandling<ProductsResponse>(request);
         
         if (requestedCategoryIds != null)
         {

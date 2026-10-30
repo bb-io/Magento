@@ -1,5 +1,4 @@
 using System.Text;
-using Apps.Magento.Api;
 using Apps.Magento.Constants;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Dtos;
@@ -29,8 +28,8 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] FilterProductRequest filterRequest)
     {
         var queryString = BuildQueryString(filterRequest);
-        var requestUrl = $"/rest/{storeViewIdentifier}/V1/products?searchCriteria{queryString}";
-        var products = await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
+        var request = new RestRequest($"{storeViewIdentifier}/V1/products?searchCriteria{queryString}");
+        var products = await Client.ExecuteWithErrorHandling<ProductsResponse>(request);
 
         if (filterRequest.CategoryIds != null)
         {
@@ -60,8 +59,8 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
         [ActionParameter] ProductIdentifier identifier)
     {
-        var product = await Client.ExecuteWithErrorHandling<ProductResponse>(
-            new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Get, Creds));
+        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}");
+        var product = await Client.ExecuteWithErrorHandling<ProductResponse>(request);
         
         var categoryActions = new CategoryActions(InvocationContext);
         var categories = new CategoriesResponse();
@@ -127,8 +126,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         };
 
-        var request = new ApiRequest("/rest/V1/products", Method.Post, Creds)
-            .AddBody(body);
+        var request = new RestRequest("V1/products", Method.Post).AddBody(body);
         return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
     }
 
@@ -185,8 +183,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         };
         
-        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put, Creds)
-            .AddBody(body);
+        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put).AddBody(body);
         return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
     }
 
@@ -257,17 +254,15 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         };
 
-        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{productSku}", Method.Put, Creds)
-            .AddBody(body);
+        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{productSku}", Method.Put).AddBody(body);
         return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
     }
 
     [Action("Delete product", Description = "Delete product by specified SKU")]
     public async Task DeleteProductBySkuAsync([ActionParameter] ProductIdentifier identifier)
     {
-        var endpoint = $"/rest/V1/products/{identifier.Sku}";
-        await Client.ExecuteWithErrorHandling(
-            new ApiRequest(endpoint, Method.Delete, Creds));
+        var endpoint = $"V1/products/{identifier.Sku}";
+        await Client.ExecuteWithErrorHandling(new RestRequest(endpoint, Method.Delete));
     }
     
     [Action("Add custom attribute", Description = "Add custom attribute to product by specified SKU")]
@@ -319,8 +314,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         };
 
-        var request = new ApiRequest($"/rest/{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put, Creds)
-            .AddBody(body);
+        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put).AddBody(body);
         return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
     }
 

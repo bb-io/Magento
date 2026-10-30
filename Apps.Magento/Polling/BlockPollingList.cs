@@ -1,5 +1,4 @@
 using System.Text;
-using Apps.Magento.Api;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Responses.Blocks;
@@ -71,11 +70,11 @@ public class BlockPollingList(InvocationContext invocationContext) : AppInvocabl
         };
     }
     
-    private async Task<BlocksResponse> GetBlocks(BaseFilterRequest filter)
+    private Task<BlocksResponse> GetBlocks(BaseFilterRequest filter)
     {
         var queryString = BuildQueryString(filter);
-        var requestUrl = $"/rest/V1/cmsBlock/search?searchCriteria{queryString}";
-        return await Client.ExecuteWithErrorHandling<BlocksResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
+        var request = new RestRequest($"V1/cmsBlock/search?searchCriteria{queryString}");
+        return Client.ExecuteWithErrorHandling<BlocksResponse>(request);
     }
     
     protected override string BuildQueryString(BaseFilterRequest filterRequest)

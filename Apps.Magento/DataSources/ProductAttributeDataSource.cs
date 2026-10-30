@@ -1,4 +1,3 @@
-using Apps.Magento.Api;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Dtos;
 using Blackbird.Applications.Sdk.Common.Dynamic;
@@ -11,7 +10,7 @@ public class ProductAttributeDataSource(InvocationContext invocationContext) : A
 {
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var request = new ApiRequest("/rest/V1/products/attributes?searchCriteria", Method.Get, Creds);
+        var request = new RestRequest("V1/products/attributes?searchCriteria");
         var productAttributes = await Client.ExecuteWithErrorHandling<ProductAttributesDto>(request);
         return productAttributes.Items
             .Where(x => context.SearchString == null || x.DefaultFrontendLabel.Contains(context.SearchString))

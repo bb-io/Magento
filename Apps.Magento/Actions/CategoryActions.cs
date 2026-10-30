@@ -1,4 +1,3 @@
-using Apps.Magento.Api;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Responses.Categories;
@@ -15,8 +14,7 @@ public class CategoryActions(InvocationContext invocationContext) : AppInvocable
     [Action("Search categories", Description = "Retrieve all categories that match the specified criteria")]
     public async Task<CategoriesResponse> GetAllCategoriesAsync()
     {
-        var requestUrl = $"/rest/V1/categories/list?searchCriteria";
-        var request = new ApiRequest(requestUrl, Method.Get, Creds);
+        var request = new RestRequest("V1/categories/list?searchCriteria");
         return await Client.ExecuteWithErrorHandling<CategoriesResponse>(request);
     }
     
@@ -24,8 +22,7 @@ public class CategoryActions(InvocationContext invocationContext) : AppInvocable
     public async Task<CategoryResponse> GetCategoryAsync(
         [ActionParameter] CategoryIdentifier categoryIdentifier)
     {
-        var requestUrl = $"/rest/V1/categories/{categoryIdentifier.CategoryId}";
-        var request = new ApiRequest(requestUrl, Method.Get, Creds);
+        var request = new RestRequest($"V1/categories/{categoryIdentifier.CategoryId}");
         return await Client.ExecuteWithErrorHandling<CategoryResponse>(request);
     }
 }

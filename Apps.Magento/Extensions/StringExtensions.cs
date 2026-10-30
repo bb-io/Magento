@@ -6,4 +6,6 @@ public static class StringExtensions
     {
         return source.Replace("{", "{{").Replace("}", "}}");
     }
+
+    public static string Encode(this string value) => Uri.EscapeDataString(value);
 }

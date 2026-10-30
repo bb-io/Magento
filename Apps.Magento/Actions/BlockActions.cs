@@ -1,6 +1,4 @@
-using System.Globalization;
 using System.Text;
-using Apps.Magento.Api;
 using Apps.Magento.Constants;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Identifiers;
@@ -24,17 +22,14 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     public async Task<BlocksResponse> GetAllBlocksAsync([ActionParameter] FilterBlockRequest filterRequest)
     {
         var queryString = BuildQueryString(filterRequest);
-        var requestUrl = $"/rest/V1/cmsBlock/search?searchCriteria{queryString}";
-
-        var request = new ApiRequest(requestUrl, Method.Get, Creds);
+        var request = new RestRequest($"V1/cmsBlock/search?searchCriteria{queryString}");
         return await Client.ExecuteWithErrorHandling<BlocksResponse>(request);
     }
     
     [Action("Get block", Description = "Get block by specified ID")]
     public async Task<BlockResponse> GetBlockAsync([ActionParameter] BlockIdentifier identifier)
     {
-        var requestUrl = $"/rest/V1/cmsBlock/{identifier.BlockId}";
-        var request = new ApiRequest(requestUrl, Method.Get, Creds);
+        var request = new RestRequest($"V1/cmsBlock/{identifier.BlockId}");
         return await Client.ExecuteWithErrorHandling<BlockResponse>(request);
     }
     
@@ -60,8 +55,7 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
             }
         };
         
-        var request = new ApiRequest("/rest/V1/cmsBlock", Method.Post, Creds)
-            .AddBody(body);
+        var request = new RestRequest("V1/cmsBlock", Method.Post).AddBody(body);
         var blockResponse = await Client.ExecuteWithErrorHandling<BlockResponse>(request);
         
         return await GetBlockAsync(new BlockIdentifier
@@ -82,8 +76,7 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
         block.Content = updateBlockRequest.Content ?? block.Content;
         block.Active = updateBlockRequest.Active ?? block.Active;
         
-        var request = new ApiRequest($"/rest/V1/cmsBlock/{identifier.BlockId}", Method.Put, Creds)
-            .AddBody(new { block });
+        var request = new RestRequest($"V1/cmsBlock/{identifier.BlockId}", Method.Put).AddBody(new { block });
         var blockResponse = await Client.ExecuteWithErrorHandling<BlockResponse>(request);
         return await GetBlockAsync(new() { BlockId = blockResponse.Id });
     }
@@ -110,8 +103,7 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     [Action("Delete block", Description = "Delete block by specified ID")]
     public async Task DeleteBlockAsync([ActionParameter] BlockIdentifier identifier)
     {
-        var requestUrl = $"/rest/V1/cmsBlock/{identifier.BlockId}";
-        var request = new ApiRequest(requestUrl, Method.Delete, Creds);
+        var request = new RestRequest($"V1/cmsBlock/{identifier.BlockId}", Method.Delete);
         await Client.ExecuteWithErrorHandling(request);
     }
     

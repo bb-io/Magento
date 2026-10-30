@@ -1,6 +1,4 @@
-using System.Globalization;
 using System.Text;
-using Apps.Magento.Api;
 using Apps.Magento.Constants;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Identifiers;
@@ -13,7 +11,6 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
-using Newtonsoft.Json;
 using RestSharp;
 
 namespace Apps.Magento.Actions;
@@ -25,16 +22,14 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     public async Task<PagesResponse> GetAllPagesAsync([ActionParameter] FilterPageRequest filterRequest)
     {
         var queryString = BuildQueryString(filterRequest);
-        var requestUrl = $"/rest/V1/cmsPage/search?searchCriteria{queryString}";
-        var request = new ApiRequest(requestUrl, Method.Get, Creds);
+        var request = new RestRequest($"V1/cmsPage/search?searchCriteria{queryString}");
         return await Client.ExecuteWithErrorHandling<PagesResponse>(request);
     }
 
     [Action("Get page", Description = "Get page by specified ID")]
     public async Task<PageResponse> GetPageByIdAsync([ActionParameter] PageIdentifier identifier)
     {
-        return await Client.ExecuteWithErrorHandling<PageResponse>(
-            new ApiRequest($"/rest/V1/cmsPage/{identifier.PageId}", Method.Get, Creds));
+        return await Client.ExecuteWithErrorHandling<PageResponse>(new RestRequest($"V1/cmsPage/{identifier.PageId}"));
     }
     
     [Action("Get page as HTML", Description = "Get page by specified ID as HTML")]
@@ -49,7 +44,7 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     [Action("Create page", Description = "Create a new page")]
     public async Task<PageResponse> CreatePageAsync([ActionParameter] CreatePageRequest pageRequest)
     {
-        var request = new ApiRequest($"/rest/V1/cmsPage", Method.Post, Creds)
+        var request = new RestRequest("V1/cmsPage", Method.Post)
             .AddBody(new
             {
                 page = new
@@ -88,7 +83,7 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
         page.SortOrder = pageRequest.SortOrder ?? page.SortOrder;
         page.Active = pageRequest.Active ?? page.Active;
         
-        var request = new ApiRequest($"/rest/V1/cmsPage/{identifier.PageId}", Method.Put, Creds)
+        var request = new RestRequest($"V1/cmsPage/{identifier.PageId}", Method.Put)
             .AddBody(new { page = new
             {
                 id = page.Id,
@@ -127,10 +122,9 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     }
 
     [Action("Delete page", Description = "Delete page by specified ID")]
-    public async Task DeletePageByIdAsync([ActionParameter] PageIdentifier identifier)
+    public Task DeletePageByIdAsync([ActionParameter] PageIdentifier identifier)
     {
-        await Client.ExecuteWithErrorHandling(
-            new ApiRequest($"/rest/V1/cmsPage/{identifier.PageId}", Method.Delete, Creds));
+        return Client.ExecuteWithErrorHandling(new RestRequest($"V1/cmsPage/{identifier.PageId}", Method.Delete));
     }
     
     protected override string BuildQueryString(BaseFilterRequest filterRequest)
