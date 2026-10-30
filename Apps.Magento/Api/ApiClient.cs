@@ -49,9 +49,11 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> creds)
         var statusCode = response.StatusCode;
         if (statusCode == HttpStatusCode.InternalServerError)
         {
+            var details = TryParseError(response.Content);
             return new PluginApplicationException(
                 $"The Magento instance returned a server error ({statusCode}). This is a problem on the Magento side. " +
-                $"Please check var/log/ and var/report/ on the instance");
+                $"Please check var/log/ and var/report/ on the instance" +
+                (details is null ? string.Empty : $". {details}"));
         }
         
         var errorDto = TryParseError(response.Content);
