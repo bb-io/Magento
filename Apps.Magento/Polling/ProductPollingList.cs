@@ -1,12 +1,13 @@
 using System.Text;
 using Apps.Magento.Invocables;
+using Apps.Magento.Models.Entities.Products;
 using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Responses.Products;
 using Apps.Magento.Polling.Models;
 using Apps.Magento.Polling.Models.Requests;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
-using Newtonsoft.Json;
 using RestSharp;
 
 namespace Apps.Magento.Polling;
@@ -14,20 +15,19 @@ namespace Apps.Magento.Polling;
 [PollingEventList]
 public class ProductPollingList(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
-    [PollingEvent("On products created", "Triggered when new products are created")]
-    public async Task<PollingEventResponse<DateMemory, ProductsResponse>> OnProductsCreated(
+    [MultipleEvents, PollingEvent("On product created", "Triggered when new products are created")]
+    public async Task<PollingEventResponse<DateMemory, List<ProductResponse>>> OnProductCreated(
         PollingEventRequest<DateMemory> request,
         [PollingEventParameter] OnProductsUpdatedRequest filterRequest)
     {
+        var pollingStart = DateTime.UtcNow;
+        
         if (request.Memory is null)
         {
             return new()
             {
                 FlyBird = false,
-                Memory = new()
-                {
-                    LastInteractionDate = DateTime.UtcNow
-                }
+                Memory = new() { LastInteractionDate = pollingStart }
             };
         }
         
@@ -36,20 +36,18 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
             CreatedAt = request.Memory.LastInteractionDate, 
             Title = filterRequest.Title
         }, filterRequest.CategoryIds?.ToList());
+        var productsList = products.ToList();
         
         return new()
         {
-            FlyBird = products.Items.Any(),
-            Result = products,
-            Memory = new()
-            {
-                LastInteractionDate = DateTime.UtcNow
-            }
+            FlyBird = productsList.Count != 0,
+            Result = productsList.Select(x => new ProductResponse(x)).ToList(),
+            Memory = new() { LastInteractionDate = pollingStart }
         };
     }
     
-    [PollingEvent("On products updated", "Triggered when products are updated")]
-    public async Task<PollingEventResponse<DateMemory, ProductsResponse>> OnProductsUpdated(
+    [PollingEvent("On product updated", "Triggered when products are updated")]
+    public async Task<PollingEventResponse<DateMemory, List<ProductResponse>>> OnProductUpdated(
         PollingEventRequest<DateMemory> request,
         [PollingEventParameter] OnProductsUpdatedRequest filterRequest)
     {
@@ -70,13 +68,14 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
             UpdatedAt = request.Memory.LastInteractionDate, 
             Title = filterRequest.Title
         }, filterRequest.CategoryIds?.ToList());
+
+        products = products.Where(x => x.CreatedAt != x.UpdatedAt);
+        var productsList = products.ToList();
         
-        products.Items = products.Items.Where(x => x.CreatedAt != x.UpdatedAt).ToList();
-            
         return new()
         {
-            FlyBird = products.Items.Any(),
-            Result = products,
+            FlyBird = productsList.Count != 0,
+            Result = productsList.Select(x => new ProductResponse(x)).ToList(),
             Memory = new()
             {
                 LastInteractionDate = DateTime.UtcNow
@@ -84,31 +83,14 @@ public class ProductPollingList(InvocationContext invocationContext) : AppInvoca
         };
     }
 
-    private async Task<ProductsResponse> GetProducts(BaseFilterRequest input, List<string>? requestedCategoryIds)
+    private async Task<IEnumerable<ProductEntity>> GetProducts(BaseFilterRequest input, List<string>? requestedCategoryIds)
     {
         var queryString = BuildQueryString(input);
         var request = new RestRequest($"V1/products?searchCriteria{queryString}");
-        var products = await Client.ExecuteWithErrorHandling<ProductsResponse>(request);
+        var products = await Client.Paginate<ProductEntity>(request);
         
         if (requestedCategoryIds != null)
-        {
-            var result = new List<ProductResponse>();
-            foreach (var productResponse in products.Items)
-            {
-                var categoriesCustomAttribute = productResponse.CustomAttributes.FirstOrDefault(x => x.AttributeCode == "category_ids");
-                if (categoriesCustomAttribute != null)
-                {
-                    var categoryIds = JsonConvert.DeserializeObject<List<string>>(categoriesCustomAttribute.Value)!;
-                    if (requestedCategoryIds.All(id => categoryIds.Contains(id)))
-                    {
-                        result.Add(productResponse);
-                    }
-                }
-            }
-            
-            products.Items = result;
-            products.TotalCount = result.Count;
-        }
+            products = products.Where(x => x.IsInAllCategories(requestedCategoryIds));
         
         return products;
     }
