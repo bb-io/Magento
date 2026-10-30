@@ -1,3 +1,4 @@
+using Apps.Magento.Extensions;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Responses.Categories;
@@ -19,10 +20,9 @@ public class CategoryActions(InvocationContext invocationContext) : AppInvocable
     }
     
     [Action("Get category", Description = "Get category by ID")]
-    public async Task<CategoryResponse> GetCategoryAsync(
-        [ActionParameter] CategoryIdentifier categoryIdentifier)
+    public async Task<CategoryResponse> GetCategory([ActionParameter] CategoryIdentifier categoryIdentifier)
     {
-        var request = new RestRequest($"V1/categories/{categoryIdentifier.CategoryId}");
-        return await Client.ExecuteWithErrorHandling<CategoryResponse>(request);
+        var category = await Client.GetCategory(categoryIdentifier.CategoryId);
+        return new(category);
     }
 }
