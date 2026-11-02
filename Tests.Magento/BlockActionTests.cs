@@ -68,7 +68,7 @@ public class BlockActionTests : TestBase
         // Act
         await Actions.UploadBlock(input, identifier);
     }
-
+    
     [TestMethod]
     public async Task UpdateBlock_EmptyInputs_ThrowsMisconfigException()
     {
@@ -106,5 +106,44 @@ public class BlockActionTests : TestBase
         Assert.AreEqual(newIdentifier, result.Identifier);
         Assert.AreEqual(newTitle, result.Title);
         Assert.AreEqual(active, result.Active);
+    }
+    
+    [TestMethod]
+    public async Task CreateBlock_ReturnsCreatedBlock()
+    {
+        // Arrange
+        string identifier = Guid.NewGuid().ToString();
+        string title = $"newBlock_{identifier}";
+        
+        var view = new StoreViewWithAllOptionalIdentifier { StoreView = "all" };
+        var input = new CreateBlockRequest
+        {
+            Identifier = identifier,
+            Title = title,
+            File = new FileReference { Name = "test.html" }
+        };
+
+        // Act
+        var result = await Actions.CreateBlock(view, input);
+        
+        // Assert
+        PrintJsonResult(result);
+        Assert.IsNotNull(result);
+        
+        Assert.AreEqual(identifier, result.Identifier);
+        Assert.AreEqual(title, result.Title);
+    }
+    
+    [TestMethod]
+    public async Task DeleteBlock_IsSuccess()
+    {
+        // Arrange
+        var identifier = new BlockIdentifier { BlockId = "5" };
+        
+        // Act
+        await Actions.DeleteBlock(identifier);
+        
+        // Assert
+        await Assert.ThrowsAsync<PluginApplicationException>(() => Actions.GetBlock(identifier));
     }
 }

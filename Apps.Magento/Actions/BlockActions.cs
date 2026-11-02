@@ -57,22 +57,26 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
         return new(file);
     }
     
-    [Action("Create block", Description = "Create block with specified data")]
-    public async Task<BlockResponse> CreateBlockAsync([ActionParameter] CreateBlockRequest createBlockRequest)
+    [Action("Create block", Description = "Create a new block")]
+    public async Task<BlockResponse> CreateBlock(
+        [ActionParameter] StoreViewWithAllOptionalIdentifier viewIdentifier,
+        [ActionParameter] CreateBlockRequest input)
     {
+        var content = input.File is null ? null : (await fileManagementClient.DownloadHtml(input.File)).Content;
+
         var body = new
         {
             block = new
             {
-                identifier = createBlockRequest.Identifier,
-                title = createBlockRequest.Title,
-                content = createBlockRequest.Content,
-                active = true
+                identifier = input.Identifier,
+                title = input.Title,
+                content,
+                active = input.Active ?? true
             }
         };
         
-        var request = new RestRequest("V1/cmsBlock", Method.Post).AddBody(body);
-        var blockResponse = await Client.ExecuteWithErrorHandling<BlockResponse>(request);
+        var request = new RestRequest($"{viewIdentifier}/V1/cmsBlock", Method.Post).AddBody(body);
+        var blockResponse = await Client.ExecuteWithErrorHandling<BlockEntity>(request);
         
         var createdBlock = await Client.GetBlock(blockResponse.Id);
         return new(createdBlock);
@@ -99,10 +103,7 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] UploadBlockRequest request,
         [ActionParameter] BlockOptionalIdentifier blockIdentifier)
     {
-        var htmlStream = await fileManagementClient.DownloadAsync(request.File);
-        string html = await new StreamReader(htmlStream).ReadToEndAsync();
-        
-        var htmlModel = HtmlHelper.ConvertFromHtml(html);
+        var htmlModel = await fileManagementClient.DownloadHtml(request.File);
         string blockId = blockIdentifier.BlockId ?? 
                          htmlModel.ResourceId ?? 
                          throw new PluginMisconfigurationException(
@@ -115,9 +116,9 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     }
     
     [Action("Delete block", Description = "Delete block by specified ID")]
-    public async Task DeleteBlockAsync([ActionParameter] BlockIdentifier identifier)
+    public Task DeleteBlock([ActionParameter] BlockIdentifier identifier)
     {
         var request = new RestRequest($"V1/cmsBlock/{identifier.BlockId}", Method.Delete);
-        await Client.ExecuteWithErrorHandling(request);
+        return Client.ExecuteWithErrorHandling(request);
     }
 }
