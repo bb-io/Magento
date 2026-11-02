@@ -9,7 +9,7 @@ public class UpdateProductRequest
     [Display("Product name")]
     public string? Name { get; set; }
     
-    [Display("Attribute set ID"), DataSource(typeof(AttributeSetDataSource))]
+    [Display("Attribute set ID"), DataSource(typeof(ProductAttributeSetDataSource))]
     public string? AttributeSetId { get; set; }
     
     [Display("Product price")]

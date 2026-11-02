@@ -75,8 +75,8 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         return new(file);
     }
 
-    [Action("Create product", Description = "Create product with specified data")]
-    public async Task<ProductResponse> CreateProductAsync([ActionParameter] CreateProductRequest createProductRequest)
+    [Action("Create product", Description = "Create a new product")]
+    public async Task<ProductResponse> CreateProduct([ActionParameter] CreateProductRequest createProductRequest)
     {
         var customAttributes = new List<object>();
         if (!string.IsNullOrEmpty(createProductRequest.PriceView))
@@ -98,7 +98,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
                 price = createProductRequest.Price,
                 status = 1,
                 visibility = 1,
-                type_id = createProductRequest.TypeId,
+                type_id = createProductRequest.Type,
                 weight = createProductRequest.Weight,
                 extension_attributes = new
                 {
@@ -109,7 +109,8 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         };
 
         var request = new RestRequest("V1/products", Method.Post).AddBody(body);
-        return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
+        var response = await Client.ExecuteWithErrorHandling<ProductEntity>(request);
+        return new(response);
     }
 
     [Action("Update product", Description = "Update product by specified SKU")]

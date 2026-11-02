@@ -69,4 +69,40 @@ public class ProductActionTests : TestBase
         // Act
         await Actions.UploadProduct(storeView, input, product);
     }
+
+    [TestMethod]
+    public async Task CreateProduct_ReturnsCreatedProduct()
+    {
+        // Arrange
+        string sku = Guid.NewGuid().ToString();
+        string productName = $"testProductName_{sku}";
+        string attributeSetId = "4";
+        double price = 99.99;
+        string typeId = "downloadable";
+        double weight = 1.23;
+        
+        var input = new CreateProductRequest
+        {
+            Sku = sku,
+            Name = productName,
+            AttributeSetId = attributeSetId,
+            Price = price,
+            Type = typeId,
+            Weight = weight
+        };
+
+        // Act
+        var result = await Actions.CreateProduct(input);
+
+        // Assert
+        PrintJsonResult(result);
+        Assert.IsNotNull(result);
+        
+        Assert.AreEqual(sku, result.Sku);
+        Assert.AreEqual(productName, result.Name);
+        Assert.AreEqual(attributeSetId, result.AttributeSetId);
+        Assert.AreEqual(price, result.Price);
+        Assert.AreEqual(typeId, result.TypeId);
+        Assert.AreEqual(weight, result.Weight);
+    }
 }

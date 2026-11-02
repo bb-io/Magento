@@ -34,4 +34,30 @@ public class DataHandlerTests : TestBase
         // Assert
         PrintDataHandlerResult(result);
     }
+    
+    [TestMethod]
+    public async Task ProductAttributeSetDataSource_ReturnsProductAttributeSets()
+    {
+        // Arrange
+        var handler = new ProductAttributeSetDataSource(InvocationContext);
+
+        // Act
+        var result = await handler.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);
+
+        // Assert
+        PrintDataHandlerResult(result);
+    }
+    
+    [TestMethod]
+    public async Task ProductTypeDataSource_ReturnsProductTypes()
+    {
+        // Arrange
+        var handler = new ProductTypeDataSource(InvocationContext);
+
+        // Act
+        var result = await handler.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);
+
+        // Assert
+        PrintDataHandlerResult(result);
+    }
 }
