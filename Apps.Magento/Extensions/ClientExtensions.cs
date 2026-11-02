@@ -1,7 +1,9 @@
 using Apps.Magento.Api;
+using Apps.Magento.Constants;
 using Apps.Magento.Models.Entities.Blocks;
 using Apps.Magento.Models.Entities.Categories;
 using Apps.Magento.Models.Entities.Products;
+using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
 
 namespace Apps.Magento.Extensions;
@@ -24,5 +26,24 @@ public static class ClientExtensions
     {
         var request = new RestRequest($"V1/cmsBlock/{blockId}");
         return client.ExecuteWithErrorHandling<BlockEntity>(request);
+    }
+    
+    public static async Task<BlockEntity> UpdateBlock(this ApiClient client, BlockEntity block)
+    {
+        var body = new
+        {
+            block = new
+            {
+                id = block.Id,
+                identifier = block.Identifier,
+                title = block.Title,
+                content = block.Content,
+                active = block.Active
+            }
+        };
+
+        var request = new RestRequest($"V1/cmsBlock/{block.Id}", Method.Put).WithJsonBody(body, JsonConfig.JsonSettings);
+        await client.ExecuteWithErrorHandling(request);
+        return await client.GetBlock(block.Id); // Refetching so that the UpdatedAt property populates
     }
 }

@@ -3,12 +3,14 @@ using Apps.Magento.Extensions;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Entities.Blocks;
 using Apps.Magento.Models.Identifiers;
+using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Requests.Blocks;
+using Apps.Magento.Models.Responses;
 using Apps.Magento.Models.Responses.Blocks;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using RestSharp;
@@ -42,12 +44,17 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
         return new(block);
     }
     
-    [Action("Get block as HTML", Description = "Get block by specified ID as HTML")]
-    public async Task<FileReference> GetBlockAsHtmlAsync([ActionParameter] BlockIdentifier identifier)
+    [Action("Download block", Description = "Download block content")]
+    public async Task<FileResponse> DownloadBlock([ActionParameter] BlockIdentifier identifier)
     {
         var block = await Client.GetBlock(identifier.BlockId);
+
+        if (string.IsNullOrWhiteSpace(block.Content))
+            throw new PluginMisconfigurationException("The content of this block is empty.");
+        
         var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Block, identifier.BlockId, block.Content);
-        return await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{block.Identifier}.html");
+        var file = await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{block.Identifier}.html");
+        return new(file);
     }
     
     [Action("Create block", Description = "Create block with specified data")]
@@ -72,41 +79,39 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     }
      
     [Action("Update block", Description = "Update block with specified data")]
-    public async Task<BlockResponse> UpdateBlockAsync([ActionParameter] BlockIdentifier identifier, 
-        [ActionParameter] UpdateBlockRequest updateBlockRequest)
+    public async Task<BlockResponse> UpdateBlock(
+        [ActionParameter] BlockIdentifier identifier, 
+        [ActionParameter] UpdateBlockRequest input)
     {
-        ValidateRequestIfAllPropertiesAreNullThrowException(updateBlockRequest);
+        RequestValidator.EnsureAnyFilled(input);
         
         var block = await Client.GetBlock(identifier.BlockId);
-        block.Identifier = updateBlockRequest.Identifier ?? block.Identifier;
-        block.Title = updateBlockRequest.Title ?? block.Title;
-        block.Content = updateBlockRequest.Content ?? block.Content;
-        block.Active = updateBlockRequest.Active ?? block.Active;
+        block.Identifier = input.Identifier ?? block.Identifier;
+        block.Title = input.Title ?? block.Title;
+        block.Active = input.Active ?? block.Active;
         
-        var request = new RestRequest($"V1/cmsBlock/{identifier.BlockId}", Method.Put).AddBody(new { block });
-        var blockResponse = await Client.ExecuteWithErrorHandling<BlockResponse>(request);
-        
-        var updatedBlock = await Client.GetBlock(blockResponse.Id);
-        return new(updatedBlock);
+        var updatedBlockEntity = await Client.UpdateBlock(block);
+        return new(updatedBlockEntity);
     }
     
-    [Action("Update block from HTML", Description = "Update block with specified data from HTML")]
-    public async Task<BlockResponse> UpdateBlockFromHtmlAsync( 
-        [ActionParameter] UpdateBlockFromHtmlRequest request)
+    [Action("Upload block", Description = "Upload content of a specific block")]
+    public async Task UploadBlock(
+        [ActionParameter] UploadBlockRequest request,
+        [ActionParameter] BlockOptionalIdentifier blockIdentifier)
     {
         var htmlStream = await fileManagementClient.DownloadAsync(request.File);
-        var html = await new StreamReader(htmlStream).ReadToEndAsync();
-        var htmlModel = HtmlHelper.ConvertFromHtml(html);
+        string html = await new StreamReader(htmlStream).ReadToEndAsync();
         
-        var blockId = request.BlockId ?? htmlModel.ResourceId ?? throw new ArgumentException("Couldn't find block ID in the HTML document. " +
-            "Please specify it manually in the optional input.");
-        return await UpdateBlockAsync(new BlockIdentifier()
-        {
-            BlockId = blockId
-        }, new UpdateBlockRequest
-        {
-            Content = htmlModel.Content
-        });
+        var htmlModel = HtmlHelper.ConvertFromHtml(html);
+        string blockId = blockIdentifier.BlockId ?? 
+                         htmlModel.ResourceId ?? 
+                         throw new PluginMisconfigurationException(
+                             "Couldn't find block ID in the file. Please specify it manually in the optional input.");
+        
+        var block = await Client.GetBlock(blockId);
+        block.Content = htmlModel.Content;
+        
+        await Client.UpdateBlock(block);
     }
     
     [Action("Delete block", Description = "Delete block by specified ID")]

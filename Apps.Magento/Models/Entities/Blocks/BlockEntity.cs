@@ -15,7 +15,7 @@ public class BlockEntity
     public string Title { get; set; } = string.Empty;
     
     [JsonProperty("content")]
-    public string Content { get; set; } = string.Empty;
+    public string? Content { get; set; }
     
     [JsonProperty("creation_time"), JsonConverter(typeof(CustomDateTimeConverter))]
     public DateTime CreationTime { get; set; }
