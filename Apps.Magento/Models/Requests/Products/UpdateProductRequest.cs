@@ -1,4 +1,5 @@
 using Apps.Magento.DataSources;
+using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Exceptions;
@@ -33,14 +34,6 @@ public class UpdateProductRequest
         if (CustomAttributeKeys?.Count() != CustomAttributeValues?.Count())
             throw new PluginMisconfigurationException("Custom attribute keys and values count must be equal");
         
-        bool hasAnyInput = !string.IsNullOrWhiteSpace(Name) || 
-                           !string.IsNullOrWhiteSpace(AttributeSetId) || 
-                           Price.HasValue || 
-                           !string.IsNullOrWhiteSpace(TypeId) || 
-                           Weight.HasValue || 
-                           CustomAttributeKeys?.Any() == true;
-
-        if (!hasAnyInput)
-            throw new PluginMisconfigurationException("Please specify at least one product field to update");
+        RequestValidator.EnsureAnyFilled(this);
     }
 }
