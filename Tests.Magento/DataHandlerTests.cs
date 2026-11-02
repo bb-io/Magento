@@ -60,4 +60,17 @@ public class DataHandlerTests : TestBase
         // Assert
         PrintDataHandlerResult(result);
     }
+    
+    [TestMethod]
+    public async Task ProductAttributeDataSource_ReturnsProductAttribute()
+    {
+        // Arrange
+        var handler = new ProductAttributeDataSource(InvocationContext);
+
+        // Act
+        var result = await handler.GetDataAsync(new DataSourceContext { SearchString = "desc" }, CancellationToken.None);
+
+        // Assert
+        PrintDataHandlerResult(result);
+    }
 }

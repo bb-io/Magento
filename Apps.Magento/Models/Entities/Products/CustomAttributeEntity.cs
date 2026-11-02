@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace Apps.Magento.Models.Entities.Products;
 
-public class CustomAttribute
+public class CustomAttributeEntity
 {
     [JsonProperty("attribute_code")]
     public string AttributeCode { get; set; } = string.Empty;

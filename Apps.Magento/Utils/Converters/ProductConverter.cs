@@ -56,7 +56,7 @@ public static class ProductConverter
         var name = WebUtility.HtmlDecode(nameNode?.InnerHtml.Trim() ?? string.Empty);
 
         var attributes = doc.DocumentNode.SelectNodes($"//div[@{AttributeCodeAttr}]")?
-            .Select(node => new CustomAttribute
+            .Select(node => new CustomAttributeEntity
             {
                 AttributeCode = node.GetAttributeValue(AttributeCodeAttr, string.Empty).Trim(),
                 Value = node.GetAttributeValue(FormatAttr, string.Empty) == HtmlFormat

@@ -15,7 +15,7 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
-using Newtonsoft.Json;
+using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
 
 namespace Apps.Magento.Actions;
@@ -114,60 +114,36 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
     }
 
     [Action("Update product", Description = "Update product by specified SKU")]
-    public async Task<ProductResponse> UpdateProductBySkuAsync(
+    public async Task<ProductResponse> UpdateProduct(
         [ActionParameter] StoreViewWithAllOptionalIdentifier storeViewIdentifier,
         [ActionParameter] ProductIdentifier identifier,
-        [ActionParameter] UpdateProductRequest updateProductRequest)
+        [ActionParameter] UpdateProductRequest input)
     {
-        if (updateProductRequest.CustomAttributeKeys != null && updateProductRequest.CustomAttributeValues != null)
-        {
-            if (updateProductRequest.CustomAttributeKeys.Count() != updateProductRequest.CustomAttributeValues.Count())
-            {
-                throw new ArgumentException("Custom attribute keys and values count must be equal");
-            }
-        }
+        input.Validate();
 
-        var product = await GetProduct(new StoreViewOptionalIdentifier { StoreView = storeViewIdentifier.StoreView == "all" ? "default" : storeViewIdentifier.StoreView }, identifier);
-        
-        if(updateProductRequest.CustomAttributeKeys != null && updateProductRequest.CustomAttributeValues != null)
-        {
-            if(updateProductRequest.CustomAttributeKeys.Count() != updateProductRequest.CustomAttributeValues.Count())
-            {
-                throw new ArgumentException("Custom attribute keys and values count must be equal");
-            }
-        }
-        
-        var mergedCustomAttributes = updateProductRequest.CustomAttributeKeys != null &&
-                                     updateProductRequest.CustomAttributeValues != null
-            ? updateProductRequest.CustomAttributeKeys.Zip(updateProductRequest.CustomAttributeValues,
-                (key, value) => new CustomAttribute { AttributeCode = key, Value = value }).ToList()
-            : new List<CustomAttribute>();
+        var customAttributes = input.CustomAttributeKeys?
+            .Zip(input.CustomAttributeValues!, (key, value) => new CustomAttributeDto(key, value))
+            .ToList();
+
         var body = new
         {
             product = new
             {
-                sku = product.Sku,
-                name = updateProductRequest.Name ?? product.Name,
-                attribute_set_id = int.Parse(updateProductRequest.AttributeSetId ?? product.AttributeSetId),
-                price = updateProductRequest.Price ?? product.Price,
-                status = product.Status,
-                visibility = product.Visibility,
-                type_id = updateProductRequest.TypeId ?? product.TypeId,
-                weight = updateProductRequest.Weight ?? product.Weight,
-                extension_attributes = new
-                {
-                    category_links = new List<object>()
-                },
-                custom_attributes = mergedCustomAttributes.Select(x => new
-                {
-                    attribute_code = x.AttributeCode,
-                    value = x.Value
-                }).ToList()
+                sku = identifier.Sku,
+                name = input.Name,
+                attribute_set_id = input.AttributeSetId is null ? (int?)null : int.Parse(input.AttributeSetId),
+                price = input.Price,
+                type_id = input.TypeId,
+                weight = input.Weight,
+                custom_attributes = customAttributes
             }
         };
-        
-        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put).AddBody(body);
-        return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
+
+        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put)
+            .WithJsonBody(body, JsonConfig.JsonSettings);
+
+        var response = await Client.ExecuteWithErrorHandling<ProductEntity>(request);
+        return new(response);
     }
 
     [Action("Upload product", Description = "Upload content of a specific product")]
@@ -188,10 +164,7 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
                                 "Couldn't find product SKU in the file. Please specify it manually in the optional input.");
         
         var product = await Client.GetProduct(productSku, storeViewIdentifier.ReadStoreView());
-
-        var customAttributes = productModel.CustomAttributes.Select(x => x.Value.IsArrayString()
-            ? new CustomAttributeDto(x.AttributeCode, JsonConvert.DeserializeObject<List<string>>(x.Value)!)
-            : new CustomAttributeDto(x.AttributeCode, x.Value));
+        var customAttributes = productModel.CustomAttributes.Select(x => new CustomAttributeDto(x.AttributeCode, x.Value));
 
         var body = new
         {
@@ -208,62 +181,31 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
     }
 
     [Action("Delete product", Description = "Delete product by specified SKU")]
-    public async Task DeleteProductBySkuAsync([ActionParameter] ProductIdentifier identifier)
+    public Task DeleteProduct([ActionParameter] ProductIdentifier identifier)
     {
-        var endpoint = $"V1/products/{identifier.Sku}";
-        await Client.ExecuteWithErrorHandling(new RestRequest(endpoint, Method.Delete));
+        var request = new RestRequest($"V1/products/{identifier.Sku}", Method.Delete);
+        return Client.ExecuteWithErrorHandling(request);
     }
     
     [Action("Add custom attribute", Description = "Add custom attribute to product by specified SKU")]
-    public async Task<ProductResponse> AddCustomAttributeToProductAsync(
+    public async Task<ProductResponse> AddCustomAttributeToProduct(
         [ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier,
         [ActionParameter] ProductIdentifier identifier,
-        [ActionParameter] AddCustomAttributeRequest customAttributeDto)
+        [ActionParameter] AddCustomAttributeRequest input)
     {
-        var product = await Client.GetProduct(identifier.Sku, storeViewIdentifier.StoreView);
-        product.CustomAttributes.Add(new CustomAttribute
-        {
-            AttributeCode = customAttributeDto.AttributeCode,
-            Value = customAttributeDto.Value
-        });
-
-        var appropriateCustomAttributes = product.CustomAttributes.Select(x =>
-        {
-            if (x.Value.IsArrayString())
-            {
-                var list = JsonConvert.DeserializeObject<List<string>>(x.Value)!
-                    .ToList();
-                return new CustomAttributeDto(x.AttributeCode, list);
-            }
-        
-            return new CustomAttributeDto(x.AttributeCode, x.Value);
-        }).ToList();
-        
         var body = new
         {
             product = new
             {
-                sku = product.Sku,
-                name = product.Name,
-                attribute_set_id = product.AttributeSetId,
-                price = product.Price,
-                status = product.Status,
-                visibility = product.Visibility,
-                type_id = product.TypeId,
-                weight = product.Weight,
-                extension_attributes = new
-                {
-                    category_links = new List<object>()
-                },
-                custom_attributes = appropriateCustomAttributes.Select(x => new
-                {
-                    attribute_code = x.AttributeCode,
-                    value = x.Value
-                })
+                sku = identifier.Sku,
+                custom_attributes = new[] { new CustomAttributeDto(input.AttributeCode, input.Value) }
             }
         };
 
-        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put).AddBody(body);
-        return await Client.ExecuteWithErrorHandling<ProductResponse>(request);
+        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put)
+            .WithJsonBody(body, JsonConfig.JsonSettings);
+
+        var response = await Client.ExecuteWithErrorHandling<ProductEntity>(request);
+        return new(response);
     }
 }

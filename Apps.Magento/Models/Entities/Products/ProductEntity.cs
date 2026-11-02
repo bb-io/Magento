@@ -42,7 +42,7 @@ public class ProductEntity
     public ExtensionAttributes ExtensionAttributes { get; set; } = new();
     
     [JsonProperty("custom_attributes")]
-    public List<CustomAttribute> CustomAttributes { get; set; } = new();
+    public List<CustomAttributeEntity> CustomAttributes { get; set; } = new();
     
     public bool IsInAllCategories(IEnumerable<string> categoryIds)
     {

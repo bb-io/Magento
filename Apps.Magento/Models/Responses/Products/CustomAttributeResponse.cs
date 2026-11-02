@@ -3,7 +3,7 @@ using Blackbird.Applications.Sdk.Common;
 
 namespace Apps.Magento.Models.Responses.Products;
 
-public class CustomAttributeResponse(CustomAttribute entity)
+public class CustomAttributeResponse(CustomAttributeEntity entity)
 {
     [Display("Attribute code")]
     public string AttributeCode { get; set; } = entity.AttributeCode;
