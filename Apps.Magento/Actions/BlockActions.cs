@@ -1,8 +1,8 @@
-using System.Text;
 using Apps.Magento.Constants;
+using Apps.Magento.Extensions;
 using Apps.Magento.Invocables;
+using Apps.Magento.Models.Entities.Blocks;
 using Apps.Magento.Models.Identifiers;
-using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Requests.Blocks;
 using Apps.Magento.Models.Responses.Blocks;
 using Apps.Magento.Utils;
@@ -15,28 +15,37 @@ using RestSharp;
 
 namespace Apps.Magento.Actions;
 
-[ActionList("Block")]
-public class BlockActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : AppInvocable(invocationContext)
+[ActionList("Blocks")]
+public class BlockActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) 
+    : AppInvocable(invocationContext)
 {
-    [Action("Search blocks", Description = "Retrieve all blocks that match the specified criteria")]
-    public async Task<BlocksResponse> GetAllBlocksAsync([ActionParameter] FilterBlockRequest filterRequest)
+    [Action("Search blocks", Description = "Search blocks by specific criteria")]
+    public async Task<SearchBlocksResponse> SearchBlocks([ActionParameter] SearchBlocksRequest input)
     {
-        var queryString = BuildQueryString(filterRequest);
-        var request = new RestRequest($"V1/cmsBlock/search?searchCriteria{queryString}");
-        return await Client.ExecuteWithErrorHandling<BlocksResponse>(request);
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereContains(("title", input.TitleContains))
+            .WhereLessThan(("creation_time", input.CreatedBefore))
+            .WhereGreaterThan(("creation_time", input.CreatedAfter))
+            .WhereLessThan(("update_time", input.UpdatedBefore))
+            .WhereGreaterThan(("update_time", input.UpdatedAfter))
+            .ApplyTo(new RestRequest("V1/cmsBlock/search"));
+        
+        var response = await Client.Paginate<BlockEntity>(request);
+        var blocks = response.Select(x => new BlockResponse(x)).ToList();
+        return new(blocks);
     }
     
     [Action("Get block", Description = "Get block by specified ID")]
-    public async Task<BlockResponse> GetBlockAsync([ActionParameter] BlockIdentifier identifier)
+    public async Task<BlockResponse> GetBlock([ActionParameter] BlockIdentifier identifier)
     {
-        var request = new RestRequest($"V1/cmsBlock/{identifier.BlockId}");
-        return await Client.ExecuteWithErrorHandling<BlockResponse>(request);
+        var block = await Client.GetBlock(identifier.BlockId);
+        return new(block);
     }
     
     [Action("Get block as HTML", Description = "Get block by specified ID as HTML")]
     public async Task<FileReference> GetBlockAsHtmlAsync([ActionParameter] BlockIdentifier identifier)
     {
-        var block = await GetBlockAsync(identifier);
+        var block = await Client.GetBlock(identifier.BlockId);
         var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Block, identifier.BlockId, block.Content);
         return await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{block.Identifier}.html");
     }
@@ -58,10 +67,8 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
         var request = new RestRequest("V1/cmsBlock", Method.Post).AddBody(body);
         var blockResponse = await Client.ExecuteWithErrorHandling<BlockResponse>(request);
         
-        return await GetBlockAsync(new BlockIdentifier
-        {
-            BlockId = blockResponse.Id
-        });
+        var createdBlock = await Client.GetBlock(blockResponse.Id);
+        return new(createdBlock);
     }
      
     [Action("Update block", Description = "Update block with specified data")]
@@ -70,7 +77,7 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     {
         ValidateRequestIfAllPropertiesAreNullThrowException(updateBlockRequest);
         
-        var block = await GetBlockAsync(identifier);
+        var block = await Client.GetBlock(identifier.BlockId);
         block.Identifier = updateBlockRequest.Identifier ?? block.Identifier;
         block.Title = updateBlockRequest.Title ?? block.Title;
         block.Content = updateBlockRequest.Content ?? block.Content;
@@ -78,7 +85,9 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
         
         var request = new RestRequest($"V1/cmsBlock/{identifier.BlockId}", Method.Put).AddBody(new { block });
         var blockResponse = await Client.ExecuteWithErrorHandling<BlockResponse>(request);
-        return await GetBlockAsync(new() { BlockId = blockResponse.Id });
+        
+        var updatedBlock = await Client.GetBlock(blockResponse.Id);
+        return new(updatedBlock);
     }
     
     [Action("Update block from HTML", Description = "Update block with specified data from HTML")]
@@ -105,46 +114,5 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     {
         var request = new RestRequest($"V1/cmsBlock/{identifier.BlockId}", Method.Delete);
         await Client.ExecuteWithErrorHandling(request);
-    }
-    
-    protected string BuildQueryString(BaseFilterRequest filterRequest)
-    {
-        var queryString = new StringBuilder();
-        var filterIndex = 0;
-
-        if (!string.IsNullOrEmpty(filterRequest.Title))
-        {
-            queryString.Append($"[filterGroups][{filterIndex}][filters][0][field]={Uri.EscapeDataString("title")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][value]={Uri.EscapeDataString($"%{filterRequest.Title}%")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][conditionType]={Uri.EscapeDataString("like")}");
-
-            filterIndex += 1;
-        }
-        
-        if (filterRequest.CreatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("creation_time")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        if (filterRequest.UpdatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("update_time")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        return queryString.ToString();
     }
 }

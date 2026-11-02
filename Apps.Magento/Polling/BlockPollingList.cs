@@ -1,5 +1,6 @@
 using System.Text;
 using Apps.Magento.Invocables;
+using Apps.Magento.Models.Entities.Blocks;
 using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Responses.Blocks;
 using Apps.Magento.Polling.Models;
@@ -13,7 +14,7 @@ namespace Apps.Magento.Polling;
 public class BlockPollingList(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
     [PollingEvent("On blocks created", "Triggered when new blocks are created")]
-    public async Task<PollingEventResponse<DateMemory, BlocksResponse>> OnBlocksCreated(
+    public async Task<PollingEventResponse<DateMemory, List<BlockResponse>>> OnBlocksCreated(
         PollingEventRequest<DateMemory> request)
     {
         if (request.Memory is null)
@@ -31,8 +32,8 @@ public class BlockPollingList(InvocationContext invocationContext) : AppInvocabl
         var blocks = await GetBlocks(new BaseFilterRequest { CreatedAt = request.Memory.LastInteractionDate });
         return new()
         {
-            FlyBird = blocks.Items.Any(),
-            Result = blocks,
+            FlyBird = blocks.Any(),
+            Result = blocks.Select(x => new BlockResponse(x)).ToList(),
             Memory = new()
             {
                 LastInteractionDate = DateTime.UtcNow
@@ -41,7 +42,7 @@ public class BlockPollingList(InvocationContext invocationContext) : AppInvocabl
     }
     
     [PollingEvent("On blocks updated", "Triggered when blocks are updated")]
-    public async Task<PollingEventResponse<DateMemory, BlocksResponse>> OnBlocksUpdated(
+    public async Task<PollingEventResponse<DateMemory, List<BlockResponse>>> OnBlocksUpdated(
         PollingEventRequest<DateMemory> request)
     {
         if (request.Memory is null)
@@ -57,12 +58,12 @@ public class BlockPollingList(InvocationContext invocationContext) : AppInvocabl
         }
         
         var blocks = await GetBlocks(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate });
-        blocks.Items = blocks.Items.Where(x => x.CreationTime != x.UpdateTime).ToList();
+        blocks = blocks.Where(x => x.CreationTime != x.UpdateTime).ToList();
 
         return new()
         {
-            FlyBird = blocks.Items.Any(),
-            Result = blocks,
+            FlyBird = blocks.Any(),
+            Result = blocks.Select(x => new BlockResponse(x)).ToList(),
             Memory = new()
             {
                 LastInteractionDate = DateTime.UtcNow
@@ -70,11 +71,12 @@ public class BlockPollingList(InvocationContext invocationContext) : AppInvocabl
         };
     }
     
-    private Task<BlocksResponse> GetBlocks(BaseFilterRequest filter)
+    private async Task<List<BlockEntity>> GetBlocks(BaseFilterRequest filter)
     {
         var queryString = BuildQueryString(filter);
         var request = new RestRequest($"V1/cmsBlock/search?searchCriteria{queryString}");
-        return Client.ExecuteWithErrorHandling<BlocksResponse>(request);
+        var response = await Client.Paginate<BlockEntity>(request);
+        return response.ToList();
     }
     
     protected string BuildQueryString(BaseFilterRequest filterRequest)

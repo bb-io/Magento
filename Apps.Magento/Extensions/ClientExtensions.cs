@@ -1,4 +1,5 @@
 using Apps.Magento.Api;
+using Apps.Magento.Models.Entities.Blocks;
 using Apps.Magento.Models.Entities.Categories;
 using Apps.Magento.Models.Entities.Products;
 using RestSharp;
@@ -17,5 +18,11 @@ public static class ClientExtensions
     {
         var request = new RestRequest($"{storeView}/V1/products/{productSku}");
         return client.ExecuteWithErrorHandling<ProductEntity>(request);
+    }
+
+    public static Task<BlockEntity> GetBlock(this ApiClient client, string blockId)
+    {
+        var request = new RestRequest($"V1/cmsBlock/{blockId}");
+        return client.ExecuteWithErrorHandling<BlockEntity>(request);
     }
 }

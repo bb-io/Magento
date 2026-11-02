@@ -73,4 +73,17 @@ public class DataHandlerTests : TestBase
         // Assert
         PrintDataHandlerResult(result);
     }
+    
+    [TestMethod]
+    public async Task BlockDataSource_ReturnsBlocks()
+    {
+        // Arrange
+        var handler = new BlockDataSource(InvocationContext);
+
+        // Act
+        var result = await handler.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);
+
+        // Assert
+        PrintDataHandlerResult(result);
+    }
 }
