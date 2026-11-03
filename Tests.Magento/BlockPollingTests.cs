@@ -11,14 +11,14 @@ public class BlockPollingTests : TestBase
     private BlockPollingList Polling => new(InvocationContext);
     
     [TestMethod]
-    public async Task OnBlocksCreated_IsSuccess()
+    public async Task OnBlockCreated_IsSuccess()
     {
         // Arrange
         var memory = new DateMemory { LastInteractionDate = DateTime.UtcNow - TimeSpan.FromMinutes(5) };
         var request = new PollingEventRequest<DateMemory> { Memory = memory };
 
         // Act
-        var result = await Polling.OnBlocksCreated(request);
+        var result = await Polling.OnBlockCreated(request);
 
         // Assert
         PrintJsonResult(result);
@@ -26,14 +26,14 @@ public class BlockPollingTests : TestBase
     }
     
     [TestMethod]
-    public async Task OnBlocksUpdated_IsSuccess()
+    public async Task OnBlockUpdated_IsSuccess()
     {
         // Arrange
         var memory = new DateMemory { LastInteractionDate = DateTime.UtcNow - TimeSpan.FromMinutes(5) };
         var request = new PollingEventRequest<DateMemory> { Memory = memory };
 
         // Act
-        var result = await Polling.OnBlocksUpdated(request);
+        var result = await Polling.OnBlockUpdated(request);
 
         // Assert
         PrintJsonResult(result);

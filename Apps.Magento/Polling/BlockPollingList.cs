@@ -13,8 +13,8 @@ namespace Apps.Magento.Polling;
 [PollingEventList("Blocks")]
 public class BlockPollingList(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
-    [MultipleEvents, PollingEvent("On blocks created", "Triggered when new blocks are created")]
-    public async Task<PollingEventResponse<DateMemory, List<BlockResponse>>> OnBlocksCreated(
+    [MultipleEvents, PollingEvent("On block created", "Triggered when a new block is created")]
+    public async Task<PollingEventResponse<DateMemory, List<BlockResponse>>> OnBlockCreated(
         PollingEventRequest<DateMemory> pollingRequest)
     {
         var pollingStart = PollingEventResults.PollingStart;
@@ -35,8 +35,8 @@ public class BlockPollingList(InvocationContext invocationContext) : AppInvocabl
         return PollingEventResults.Flight(blocks, pollingStart);
     }
     
-    [MultipleEvents, PollingEvent("On blocks updated", "Triggered when blocks are updated")]
-    public async Task<PollingEventResponse<DateMemory, List<BlockResponse>>> OnBlocksUpdated(
+    [MultipleEvents, PollingEvent("On block updated", "Triggered when a block is updated")]
+    public async Task<PollingEventResponse<DateMemory, List<BlockResponse>>> OnBlockUpdated(
         PollingEventRequest<DateMemory> pollingRequest)
     {
         var pollingStart = PollingEventResults.PollingStart;
