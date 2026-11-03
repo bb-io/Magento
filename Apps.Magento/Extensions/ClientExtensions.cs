@@ -4,6 +4,8 @@ using Apps.Magento.Models.Entities.Blocks;
 using Apps.Magento.Models.Entities.Categories;
 using Apps.Magento.Models.Entities.Pages;
 using Apps.Magento.Models.Entities.Products;
+using Apps.Magento.Models.Entities.StoreViews;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
 
@@ -77,5 +79,19 @@ public static class ClientExtensions
         var request = new RestRequest($"V1/cmsPage/{page.Id}", Method.Put).WithJsonBody(body, JsonConfig.JsonSettings);
         await client.ExecuteWithErrorHandling(request);
         return await client.GetPage(page.Id);   // Refetching so that the UpdatedAt property populates
+    }
+
+    public static async Task<IEnumerable<StoreViewEntity>> ListStoreViews(this ApiClient client)
+    {
+        var request = new RestRequest("V1/store/storeViews");
+        var storeViews = await client.ExecuteWithErrorHandling<IEnumerable<StoreViewEntity>>(request);
+        return storeViews.Where(x => x.Code != "admin");
+    }
+
+    public static async Task<StoreViewEntity> GetStoreView(this ApiClient client, string viewCode)
+    {
+        var storeViews = await client.ListStoreViews();
+        return storeViews.FirstOrDefault(x => x.Code == viewCode) ??
+               throw new PluginMisconfigurationException($"Store view '{viewCode}' was not found");
     }
 }
