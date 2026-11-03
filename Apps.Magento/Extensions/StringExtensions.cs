@@ -13,4 +13,9 @@ public static class StringExtensions
     {
         return value.StartsWith('[') && value.EndsWith(']');
     }
+    
+    public static bool Matches(this string text, string? search)
+    {
+        return string.IsNullOrEmpty(search) || text.Contains(search, StringComparison.OrdinalIgnoreCase);
+    }
 }

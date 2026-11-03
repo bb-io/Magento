@@ -16,4 +16,10 @@ public class CategoryResponse(CategoryEntity entity)
 
     [Display("Category is active")]
     public bool IsActive { get; set; } = entity.IsActive;
+
+    [Display("Category created at")]
+    public DateTime CreatedAt { get; set; } = entity.CreatedAt;
+
+    [Display("Category updated at")]
+    public DateTime UpdatedAt { get; set; } = entity.UpdatedAt;
 }

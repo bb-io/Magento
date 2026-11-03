@@ -21,6 +21,6 @@ public class SearchProductsRequest
     [Display("Updated before")]
     public DateTime? UpdatedBefore { get; set; }
     
-    [Display("Category IDs"), DataSource(typeof(CategoryDataHandler))]
+    [Display("Category IDs"), DataSource(typeof(CategoryDataSource))]
     public IEnumerable<string>? CategoryIds { get; set; }
 }

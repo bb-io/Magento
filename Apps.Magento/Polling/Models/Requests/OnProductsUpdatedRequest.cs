@@ -9,6 +9,6 @@ public class OnProductsUpdatedRequest
     [Display("Title", Description = "By setting this parameter, the event will only trigger when the product title contains the specified value")]
     public string? Title { get; set; }
     
-    [Display("Category IDs", Description = "Filter products that belong to all specified category IDs"), DataSource(typeof(CategoryDataHandler))]
+    [Display("Category IDs", Description = "Filter products that belong to all specified category IDs"), DataSource(typeof(CategoryDataSource))]
     public IEnumerable<string>? CategoryIds { get; set; }
 }

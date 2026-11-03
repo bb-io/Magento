@@ -18,7 +18,20 @@ public class DataHandlerTests : TestBase
         var result = await handler.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);
 
         // Assert
-        PrintJsonResult(result);
+        PrintDataHandlerResult(result);
+    }
+    
+    [TestMethod]
+    public async Task StoreViewWithAllDataSource_ReturnsStoreViews()
+    {
+        // Arrange
+        var handler = new StoreViewWithAllDataSource(InvocationContext);
+
+        // Act
+        var result = await handler.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);
+
+        // Assert
+        PrintDataHandlerResult(result);
     }
     
     [TestMethod]
@@ -95,6 +108,19 @@ public class DataHandlerTests : TestBase
 
         // Act
         var result = await handler.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);
+
+        // Assert
+        PrintDataHandlerResult(result);
+    }
+    
+    [TestMethod]
+    public async Task CategoryDataHandler_ReturnsCategories()
+    {
+        // Arrange
+        var handler = new CategoryDataSource(InvocationContext);
+
+        // Act
+        var result = await handler.GetDataAsync(new DataSourceContext { SearchString = "cat" }, CancellationToken.None);
 
         // Assert
         PrintDataHandlerResult(result);

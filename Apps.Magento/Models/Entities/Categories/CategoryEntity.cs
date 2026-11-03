@@ -1,3 +1,4 @@
+using Apps.Magento.Utils;
 using Newtonsoft.Json;
 
 namespace Apps.Magento.Models.Entities.Categories;
@@ -15,4 +16,10 @@ public class CategoryEntity
 
     [JsonProperty("is_active")]
     public bool IsActive { get; set; }
+    
+    [JsonProperty("created_at"), JsonConverter(typeof(CustomDateTimeConverter))]
+    public DateTime CreatedAt { get; set; }
+    
+    [JsonProperty("updated_at"), JsonConverter(typeof(CustomDateTimeConverter))]
+    public DateTime UpdatedAt { get; set; }
 }
