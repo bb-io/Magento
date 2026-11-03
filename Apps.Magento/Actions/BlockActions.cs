@@ -104,10 +104,7 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] BlockOptionalIdentifier blockIdentifier)
     {
         var htmlModel = await fileManagementClient.DownloadHtml(request.File);
-        string blockId = blockIdentifier.BlockId ?? 
-                         htmlModel.ResourceId ?? 
-                         throw new PluginMisconfigurationException(
-                             "Couldn't find block ID in the file. Please specify it manually in the optional input.");
+        string blockId = ContentResolver.ResolveContentId(blockIdentifier.BlockId, htmlModel.ResourceId, "block ID");
         
         var block = await Client.GetBlock(blockId);
         block.Content = htmlModel.Content;

@@ -157,11 +157,8 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         
         var htmlModel = HtmlHelper.ConvertFromHtml(html);
         var productModel = ProductConverter.FromHtml(html);
-        
-        string productSku = productIdentifier.Sku ?? 
-                            htmlModel.ResourceId ?? 
-                            throw new PluginMisconfigurationException(
-                                "Couldn't find product SKU in the file. Please specify it manually in the optional input.");
+
+        string productSku = ContentResolver.ResolveContentId(productIdentifier.Sku, htmlModel.ResourceId, "product SKU");
         
         var product = await Client.GetProduct(productSku, storeViewIdentifier.ReadStoreView());
         var customAttributes = productModel.CustomAttributes.Select(x => new CustomAttributeDto(x.AttributeCode, x.Value));
