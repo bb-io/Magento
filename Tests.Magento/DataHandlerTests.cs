@@ -86,4 +86,17 @@ public class DataHandlerTests : TestBase
         // Assert
         PrintDataHandlerResult(result);
     }
+    
+    [TestMethod]
+    public async Task PageDataSource_ReturnsPages()
+    {
+        // Arrange
+        var handler = new PageDataSource(InvocationContext);
+
+        // Act
+        var result = await handler.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);
+
+        // Assert
+        PrintDataHandlerResult(result);
+    }
 }

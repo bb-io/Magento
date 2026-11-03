@@ -1,5 +1,6 @@
 using System.Text;
 using Apps.Magento.Invocables;
+using Apps.Magento.Models.Entities.Pages;
 using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Responses.Pages;
 using Apps.Magento.Polling.Models;
@@ -13,7 +14,7 @@ namespace Apps.Magento.Polling;
 public class PagePollingList(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
     [PollingEvent("On pages created", "Triggered when new pages are created")]
-    public async Task<PollingEventResponse<DateMemory, PagesResponse>> OnPagesCreated(
+    public async Task<PollingEventResponse<DateMemory, List<PageResponse>>> OnPagesCreated(
         PollingEventRequest<DateMemory> request)
     {
         if (request.Memory is null)
@@ -31,8 +32,8 @@ public class PagePollingList(InvocationContext invocationContext) : AppInvocable
         var pages = await GetPages(new BaseFilterRequest { CreatedAt = request.Memory.LastInteractionDate });
         return new()
         {
-            FlyBird = pages.Items.Any(),
-            Result = pages,
+            FlyBird = pages.Any(),
+            Result = pages.Select(x => new PageResponse(x)).ToList(),
             Memory = new()
             {
                 LastInteractionDate = DateTime.UtcNow
@@ -41,7 +42,7 @@ public class PagePollingList(InvocationContext invocationContext) : AppInvocable
     }
     
     [PollingEvent("On pages updated", "Triggered when pages are updated")]
-    public async Task<PollingEventResponse<DateMemory, PagesResponse>> OnPagesUpdated(
+    public async Task<PollingEventResponse<DateMemory, List<PageResponse>>> OnPagesUpdated(
         PollingEventRequest<DateMemory> request)
     {
         if (request.Memory is null)
@@ -57,12 +58,12 @@ public class PagePollingList(InvocationContext invocationContext) : AppInvocable
         }
         
         var pages = await GetPages(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate });
-        pages.Items = pages.Items.Where(x => x.CreationTime != x.UpdateTime).ToList();
+        pages = pages.Where(x => x.CreationTime != x.UpdateTime).ToList();
         
         return new()
         {
-            FlyBird = pages.Items.Any(),
-            Result = pages,
+            FlyBird = pages.Any(),
+            Result = pages.Select(x => new PageResponse(x)).ToList(),
             Memory = new()
             {
                 LastInteractionDate = DateTime.UtcNow
@@ -70,11 +71,12 @@ public class PagePollingList(InvocationContext invocationContext) : AppInvocable
         };
     }
     
-    private Task<PagesResponse> GetPages(BaseFilterRequest filter)
+    private async Task<List<PageEntity>> GetPages(BaseFilterRequest filter)
     {
         var queryString = BuildQueryString(filter);
         var request = new RestRequest($"V1/cmsPage/search?searchCriteria{queryString}");
-        return Client.ExecuteWithErrorHandling<PagesResponse>(request);
+        var response = await Client.Paginate<PageEntity>(request);
+        return response.ToList();
     }
     
     protected string BuildQueryString(BaseFilterRequest filterRequest)

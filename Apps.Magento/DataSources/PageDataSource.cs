@@ -1,35 +1,21 @@
-using Apps.Magento.Actions;
 using Apps.Magento.Invocables;
-using Apps.Magento.Models.Identifiers;
-using Apps.Magento.Models.Requests.Pages;
-using Apps.Magento.Models.Responses.Pages;
+using Apps.Magento.Models.Entities.Pages;
+using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using RestSharp;
 
 namespace Apps.Magento.DataSources;
 
-public class PageDataSource(InvocationContext invocationContext) : AppInvocable(invocationContext), IAsyncDataSourceHandler
+public class PageDataSource(InvocationContext invocationContext) : AppInvocable(invocationContext), IAsyncDataSourceItemHandler
 {
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var actions = new PageActions(InvocationContext, null!);
-        var pages = await actions.GetAllPagesAsync(new FilterPageRequest()
-        {
-            Title = context.SearchString
-        });
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereContains(("title", context.SearchString))
+            .ApplyTo(new RestRequest("V1/cmsPage/search"));
         
-        return pages.Items
-            .ToDictionary(x => x.Id, x => GetPageName(x, pages.Items));
-    }
-    
-    private string GetPageName(PageResponse pageResponse, List<PageResponse> pages)
-    {
-        var pageWithSameName = pages.FirstOrDefault(x => x.Title == pageResponse.Title && x.Id != pageResponse.Id);
-        if (pageWithSameName == null)
-        {
-            return pageResponse.Title;
-        }
-        
-        return $"{pageResponse.Title} ({pageResponse.Identifier})";
+        var response = await Client.Paginate<PageEntity>(request, maxPages: 1);
+        return response.Select(x => new DataSourceItem(x.Id, x.Title));
     }
 }

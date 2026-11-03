@@ -1,9 +1,9 @@
-using System.Text;
 using Apps.Magento.Constants;
+using Apps.Magento.Extensions;
 using Apps.Magento.Invocables;
+using Apps.Magento.Models.Entities.Pages;
 using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Identifiers.Optional;
-using Apps.Magento.Models.Requests;
 using Apps.Magento.Models.Requests.Pages;
 using Apps.Magento.Models.Responses.Pages;
 using Apps.Magento.Utils;
@@ -16,28 +16,37 @@ using RestSharp;
 
 namespace Apps.Magento.Actions;
 
-[ActionList("Page")]
+[ActionList("Pages")]
 public class PageActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : AppInvocable(invocationContext)
 {
-    [Action("Search pages", Description = "Retrieve all pages that match the specified criteria")]
-    public async Task<PagesResponse> GetAllPagesAsync([ActionParameter] FilterPageRequest filterRequest)
+    [Action("Search pages", Description = "Search pages by specific criteria")]
+    public async Task<SearchPagesResponse> SearchPages([ActionParameter] SearchPagesRequest input)
     {
-        var queryString = BuildQueryString(filterRequest);
-        var request = new RestRequest($"V1/cmsPage/search?searchCriteria{queryString}");
-        return await Client.ExecuteWithErrorHandling<PagesResponse>(request);
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereContains(("title", input.TitleContains))
+            .WhereLessThan(("creation_time", input.CreatedBefore))
+            .WhereGreaterThan(("creation_time", input.CreatedAfter))
+            .WhereLessThan(("update_time", input.UpdatedBefore))
+            .WhereGreaterThan(("update_time", input.UpdatedAfter))
+            .ApplyTo(new RestRequest("V1/cmsPage/search"));
+        
+        var response = await Client.Paginate<PageEntity>(request);
+        var pages = response.Select(x => new PageResponse(x)).ToList();
+        return new(pages);
     }
 
     [Action("Get page", Description = "Get page by specified ID")]
-    public async Task<PageResponse> GetPageByIdAsync([ActionParameter] PageIdentifier identifier)
+    public async Task<PageResponse> GetPage([ActionParameter] PageIdentifier identifier)
     {
-        return await Client.ExecuteWithErrorHandling<PageResponse>(new RestRequest($"V1/cmsPage/{identifier.PageId}"));
+        var page = await Client.GetPage(identifier.PageId);
+        return new(page);
     }
     
     [Action("Get page as HTML", Description = "Get page by specified ID as HTML")]
     public async Task<FileReference> GetPageByIdAsHtmlAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
         [ActionParameter] PageIdentifier identifier)
     {
-        var page = await GetPageByIdAsync(identifier);
+        var page = await Client.GetPage(identifier.PageId);
         var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Page, identifier.PageId, page.Content);
         return await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{page.Identifier}.html");
     }
@@ -72,7 +81,7 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     {
         ValidateRequestIfAllPropertiesAreNullThrowException(pageRequest);        
         
-        var page = await GetPageByIdAsync(identifier);
+        var page = await Client.GetPage(identifier.PageId);
         page.Identifier = pageRequest.Identifier ?? page.Identifier;
         page.Title = pageRequest.Title ?? page.Title;
         page.PageLayout = pageRequest.PageLayout ?? page.PageLayout;
@@ -101,7 +110,9 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
             } });
         
         await Client.ExecuteWithErrorHandling<PageResponse>(request);
-        return await GetPageByIdAsync(identifier);
+        
+        var updatedPage = await Client.GetPage(identifier.PageId);
+        return new(updatedPage);
     }
     
     [Action("Update page from HTML", Description = "Update page from HTML document. Recommended to use with action: Get page as HTML")]
@@ -126,46 +137,5 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     public Task DeletePageByIdAsync([ActionParameter] PageIdentifier identifier)
     {
         return Client.ExecuteWithErrorHandling(new RestRequest($"V1/cmsPage/{identifier.PageId}", Method.Delete));
-    }
-    
-    protected string BuildQueryString(BaseFilterRequest filterRequest)
-    {
-        var queryString = new StringBuilder();
-        var filterIndex = 0;
-
-        if (!string.IsNullOrEmpty(filterRequest.Title))
-        {
-            queryString.Append($"[filterGroups][{filterIndex}][filters][0][field]={Uri.EscapeDataString("title")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][value]={Uri.EscapeDataString($"%{filterRequest.Title}%")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][conditionType]={Uri.EscapeDataString("like")}");
-
-            filterIndex += 1;
-        }
-        
-        if (filterRequest.CreatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("creation_time")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        if (filterRequest.UpdatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("update_time")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        return queryString.ToString();
     }
 }
