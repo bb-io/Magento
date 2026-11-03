@@ -14,9 +14,6 @@ public class PageResponse(PageEntity entity)
     [Display("Page title")]
     public string Title { get; set; } = entity.Title;
 
-    [Display("Page layout")]
-    public string? PageLayout { get; set; } = entity.PageLayout;
-
     [Display("Page meta title")]
     public string? MetaTitle { get; set; } = entity.MetaTitle;
 
@@ -34,9 +31,6 @@ public class PageResponse(PageEntity entity)
 
     [Display("Page updated at")]
     public DateTime UpdatedAt { get; set; } = entity.UpdateTime;
-
-    [Display("Page sort order")]
-    public string? SortOrder { get; set; } = entity.SortOrder;
 
     [Display("Page is active")]
     public bool Active { get; set; } = entity.Active;

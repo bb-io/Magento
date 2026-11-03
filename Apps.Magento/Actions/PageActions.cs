@@ -5,13 +5,15 @@ using Apps.Magento.Models.Entities.Pages;
 using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Requests.Pages;
+using Apps.Magento.Models.Responses;
 using Apps.Magento.Models.Responses.Pages;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
 
 namespace Apps.Magento.Actions;
@@ -42,37 +44,46 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
         return new(page);
     }
     
-    [Action("Get page as HTML", Description = "Get page by specified ID as HTML")]
-    public async Task<FileReference> GetPageByIdAsHtmlAsync([ActionParameter] StoreViewOptionalIdentifier storeViewIdentifier, 
-        [ActionParameter] PageIdentifier identifier)
+    [Action("Download page", Description = "Download page content")]
+    public async Task<FileResponse> DownloadPage([ActionParameter] PageIdentifier identifier)
     {
         var page = await Client.GetPage(identifier.PageId);
+        
+        if (string.IsNullOrWhiteSpace(page.Content))
+            throw new PluginMisconfigurationException("The content of this page is empty.");
+        
         var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Page, identifier.PageId, page.Content);
-        return await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{page.Identifier}.html");
+        var file = await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{page.Identifier.Replace('/', '_')}.html");
+        return new(file);
     }
 
     [Action("Create page", Description = "Create a new page")]
-    public async Task<PageResponse> CreatePageAsync([ActionParameter] CreatePageRequest pageRequest)
+    public async Task<PageResponse> CreatePage(
+        [ActionParameter] StoreViewWithAllOptionalIdentifier viewIdentifier,
+        [ActionParameter] CreatePageRequest input)
     {
-        var request = new RestRequest("V1/cmsPage", Method.Post)
-            .AddBody(new
+        var content = input.File is null ? null : (await fileManagementClient.DownloadHtml(input.File)).Content;
+        var body = new
+        {
+            page = new
             {
-                page = new
-                {
-                    identifier = pageRequest.Identifier,
-                    title = pageRequest.Title,
-                    page_layout = pageRequest.PageLayout,
-                    meta_title = pageRequest.MetaTitle,
-                    meta_keywords = pageRequest.MetaKeywords,
-                    meta_description = pageRequest.MetaDescription,
-                    content_heading = pageRequest.ContentHeading,
-                    content = pageRequest.Content,
-                    sort_order = pageRequest.SortOrder,
-                    active = true
-                }
-            });
+                identifier = input.Identifier,
+                title = input.Title,
+                meta_title = input.MetaTitle,
+                meta_keywords = input.MetaKeywords,
+                meta_description = input.MetaDescription,
+                content_heading = input.ContentHeading,
+                content,
+                active = input.Active ?? true,
+            }
+        };
+        
+        string storeCode = viewIdentifier.StoreView ?? "all";
+        var request = new RestRequest($"{storeCode}/V1/cmsPage", Method.Post).WithJsonBody(body, JsonConfig.JsonSettings);
+        var response = await Client.ExecuteWithErrorHandling<PageEntity>(request);
 
-        return await Client.ExecuteWithErrorHandling<PageResponse>(request);
+        var createdPage = await Client.GetPage(response.Id);    // Refetch so that timestamps populate
+        return new(createdPage);
     }
 
     [Action("Update page", Description = "Update page by specified ID")]
