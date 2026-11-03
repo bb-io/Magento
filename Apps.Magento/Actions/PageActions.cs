@@ -87,66 +87,43 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     }
 
     [Action("Update page", Description = "Update page by specified ID")]
-    public async Task<PageResponse> UpdatePageByIdAsync([ActionParameter] PageIdentifier identifier,
-        [ActionParameter] UpdatePageRequest pageRequest)
+    public async Task<PageResponse> UpdatePage(
+        [ActionParameter] PageIdentifier identifier,
+        [ActionParameter] UpdatePageRequest input)
     {
-        ValidateRequestIfAllPropertiesAreNullThrowException(pageRequest);        
+        RequestValidator.EnsureAnyFilled(input);
         
         var page = await Client.GetPage(identifier.PageId);
-        page.Identifier = pageRequest.Identifier ?? page.Identifier;
-        page.Title = pageRequest.Title ?? page.Title;
-        page.PageLayout = pageRequest.PageLayout ?? page.PageLayout;
-        page.MetaTitle = pageRequest.MetaTitle ?? page.MetaTitle;
-        page.MetaKeywords = pageRequest.MetaKeywords ?? page.MetaKeywords;
-        page.MetaDescription = pageRequest.MetaDescription ?? page.MetaDescription;
-        page.ContentHeading = pageRequest.ContentHeading ?? page.ContentHeading;
-        page.Content = pageRequest.Content ?? page.Content;
-        page.SortOrder = pageRequest.SortOrder ?? page.SortOrder;
-        page.Active = pageRequest.Active ?? page.Active;
-        
-        var request = new RestRequest($"V1/cmsPage/{identifier.PageId}", Method.Put)
-            .AddBody(new { page = new
-            {
-                id = page.Id,
-                identifier = page.Identifier,
-                title = page.Title,
-                page_layout = page.PageLayout,
-                meta_title = page.MetaTitle,
-                meta_keywords = page.MetaKeywords,
-                meta_description = page.MetaDescription,
-                content_heading = page.ContentHeading,
-                content = page.Content,
-                sort_order = page.SortOrder,
-                active = page.Active
-            } });
-        
-        await Client.ExecuteWithErrorHandling<PageResponse>(request);
-        
-        var updatedPage = await Client.GetPage(identifier.PageId);
-        return new(updatedPage);
+        page.Identifier = input.Identifier ?? page.Identifier;
+        page.Title = input.Title ?? page.Title;
+        page.MetaTitle = input.MetaTitle ?? page.MetaTitle;
+        page.MetaKeywords = input.MetaKeywords ?? page.MetaKeywords;
+        page.MetaDescription = input.MetaDescription ?? page.MetaDescription;
+        page.ContentHeading = input.ContentHeading ?? page.ContentHeading;
+        page.Active = input.Active ?? page.Active;
+
+        var updatedPageEntity = await Client.UpdatePage(page);
+        return new(updatedPageEntity);
     }
     
-    [Action("Update page from HTML", Description = "Update page from HTML document. Recommended to use with action: Get page as HTML")]
-    public async Task<PageResponse> UpdatePageByIdFromHtmlAsync([ActionParameter] UpdatePageFromHtmlRequest request)
+    [Action("Upload page", Description = "Upload page content")]
+    public async Task UploadPage(
+        [ActionParameter] PageOptionalIdentifier pageIdentifier,
+        [ActionParameter] UploadPageRequest input)
     {
-        var htmlStream = await fileManagementClient.DownloadAsync(request.File);
-        var html = await new StreamReader(htmlStream).ReadToEndAsync();
-        var htmlModel = HtmlHelper.ConvertFromHtml(html);
+        var htmlModel = await fileManagementClient.DownloadHtml(input.File);
+        string pageId = ContentResolver.ResolveContentId(pageIdentifier.PageId, htmlModel.ResourceId, "page ID");
         
-        var pageId = request.PageId ?? htmlModel.ResourceId ?? throw new ArgumentException("Couldn't find page ID in the HTML document. " +
-            "Please specify it manually in the optional input.");
-        return await UpdatePageByIdAsync(new PageIdentifier
-        {
-            PageId = pageId
-        }, new UpdatePageRequest
-        {
-            Content = htmlModel.Content
-        });
+        var page = await Client.GetPage(pageId);
+        page.Content = htmlModel.Content;
+        
+        await Client.UpdatePage(page);
     }
 
     [Action("Delete page", Description = "Delete page by specified ID")]
-    public Task DeletePageByIdAsync([ActionParameter] PageIdentifier identifier)
+    public Task DeletePage([ActionParameter] PageIdentifier identifier)
     {
-        return Client.ExecuteWithErrorHandling(new RestRequest($"V1/cmsPage/{identifier.PageId}", Method.Delete));
+        var request = new RestRequest($"V1/cmsPage/{identifier.PageId}", Method.Delete);
+        return Client.ExecuteWithErrorHandling(request);
     }
 }

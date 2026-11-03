@@ -53,4 +53,29 @@ public static class ClientExtensions
         var request = new RestRequest($"V1/cmsPage/{pageId}");
         return client.ExecuteWithErrorHandling<PageEntity>(request);
     }
+    
+    public static async Task<PageEntity> UpdatePage(this ApiClient client, PageEntity page)
+    {
+        var body = new
+        {
+            page = new
+            {
+                id = page.Id,
+                identifier = page.Identifier,
+                title = page.Title,
+                page_layout = page.PageLayout,
+                meta_title = page.MetaTitle,
+                meta_keywords = page.MetaKeywords,
+                meta_description = page.MetaDescription,
+                content_heading = page.ContentHeading,
+                content = page.Content,
+                sort_order = page.SortOrder,
+                active = page.Active 
+            }
+        };
+
+        var request = new RestRequest($"V1/cmsPage/{page.Id}", Method.Put).WithJsonBody(body, JsonConfig.JsonSettings);
+        await client.ExecuteWithErrorHandling(request);
+        return await client.GetPage(page.Id);   // Refetching so that the UpdatedAt property populates
+    }
 }
