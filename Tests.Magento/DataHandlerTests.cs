@@ -1,4 +1,6 @@
+using Apps.Magento.Constants;
 using Apps.Magento.DataSources;
+using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Identifiers.Optional;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Tests.Magento.Base;
@@ -131,6 +133,21 @@ public class DataHandlerTests : TestBase
     {
         // Arrange
         var handler = new StoreGroupDataSource(InvocationContext);
+
+        // Act
+        var result = await handler.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);
+
+        // Assert
+        PrintDataHandlerResult(result);
+    }
+    
+    [TestMethod]
+    public async Task ContentDataSource_ReturnsContent()
+    {
+        // Arrange
+        var contentType = new ContentTypeIdentifier { ContentType = ContentTypeConstants.Product };
+        var storeView = new StoreViewOptionalIdentifier { };
+        var handler = new ContentDataSource(InvocationContext, contentType, storeView);
 
         // Act
         var result = await handler.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);

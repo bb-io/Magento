@@ -18,4 +18,9 @@ public static class StringExtensions
     {
         return string.IsNullOrEmpty(search) || text.Contains(search, StringComparison.OrdinalIgnoreCase);
     }
+
+    public static string ToHtmlFilename(this string contentId)
+    {
+        return $"{contentId.Replace('/', '_')}.html";
+    }
 }

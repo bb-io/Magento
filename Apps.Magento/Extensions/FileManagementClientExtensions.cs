@@ -1,4 +1,5 @@
 using Apps.Magento.Models;
+using Apps.Magento.Models.Utility.Files;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
@@ -12,5 +13,10 @@ public static class FileManagementClientExtensions
         var htmlStream = await fileManagementClient.DownloadAsync(file);
         string html = await new StreamReader(htmlStream).ReadToEndAsync();
         return HtmlHelper.ConvertFromHtml(html);
+    }
+
+    public static Task<FileReference> UploadDownloadedFile(this IFileManagementClient fileManagementClient, DownloadedFile file)
+    {
+        return fileManagementClient.UploadAsync(file.Stream, file.MimeType, file.FileName);
     }
 }

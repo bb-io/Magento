@@ -1,5 +1,6 @@
 using Apps.Magento.Actions;
 using Apps.Magento.Constants;
+using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Requests.Content;
 using Tests.Magento.Base;
@@ -40,5 +41,23 @@ public class ContentActionTests : TestBase
         // Assert
         PrintJsonResult(result.Content);
         Assert.IsTrue(result.Content.All(x => x.ContentType == contentType));
+    }
+
+    [TestMethod]
+    public async Task DownloadContent_IsSuccess()
+    {
+        // Arrange
+        var contentType = new ContentTypeIdentifier { ContentType = ContentTypeConstants.Block };
+        var input = new DownloadContentRequest
+        {
+            ContentId = "1"
+        };
+        var storeView = new StoreViewOptionalIdentifier { };
+
+        // Act
+        var result = await Actions.DownloadContent(contentType, input, storeView);
+
+        // Assert
+        Console.WriteLine(result.Content.Name);
     }
 }
