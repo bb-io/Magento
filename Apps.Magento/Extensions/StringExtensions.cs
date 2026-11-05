@@ -6,4 +6,21 @@ public static class StringExtensions
     {
         return source.Replace("{", "{{").Replace("}", "}}");
     }
+
+    public static string Encode(this string value) => Uri.EscapeDataString(value);
+    
+    public static bool IsArrayString(this string value)
+    {
+        return value.StartsWith('[') && value.EndsWith(']');
+    }
+    
+    public static bool Matches(this string text, string? search)
+    {
+        return string.IsNullOrEmpty(search) || text.Contains(search, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string ToHtmlFilename(this string contentId)
+    {
+        return $"{contentId.Replace('/', '_')}.html";
+    }
 }

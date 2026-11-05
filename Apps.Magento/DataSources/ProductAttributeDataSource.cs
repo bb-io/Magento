@@ -1,21 +1,22 @@
-using Apps.Magento.Api;
 using Apps.Magento.Invocables;
-using Apps.Magento.Models.Dtos;
+using Apps.Magento.Models.Entities.Products;
+using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 
 namespace Apps.Magento.DataSources;
 
-public class ProductAttributeDataSource(InvocationContext invocationContext) : AppInvocable(invocationContext), IAsyncDataSourceHandler
+public class ProductAttributeDataSource(InvocationContext invocationContext) 
+    : AppInvocable(invocationContext), IAsyncDataSourceItemHandler
 {
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var request = new ApiRequest("/rest/V1/products/attributes?searchCriteria", Method.Get, Creds);
-        var productAttributes = await Client.ExecuteWithErrorHandling<ProductAttributesDto>(request);
-        return productAttributes.Items
-            .Where(x => context.SearchString == null || x.DefaultFrontendLabel.Contains(context.SearchString))
-            .Where(x => x.FrontendInput == "text" || x.FrontendInput == "textarea")
-            .ToDictionary(x => x.AttributeCode, x => x.DefaultFrontendLabel);
+        var request = new SearchCriteriaBuilder()
+            .WhereContains(("frontend_label", context.SearchString), ("attribute_code", context.SearchString))
+            .ApplyTo(new RestRequest("V1/products/attributes"));
+        
+        var attributes = await Client.Paginate<ProductAttributeEntity>(request, maxPages: 1);
+        return attributes.Select(x => new DataSourceItem(x.AttributeCode, x.DefaultFrontendLabel)).ToList();
     }
 }

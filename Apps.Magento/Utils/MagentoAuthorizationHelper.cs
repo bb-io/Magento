@@ -1,68 +1,76 @@
-﻿using System.Text;
+﻿using System.Net;
+using System.Text;
 using System.Security.Cryptography;
-using System.Web;
+using Apps.Magento.Extensions;
 
 namespace Apps.Magento.Utils;
 
 public static class MagentoAuthorizationHelper
 {
-    public static string CreateAuthorizationHeader(string httpMethod, string url, string oauthConsumerKey, string oauthNonce, string oauthTimestamp, string oauthToken, string consumerSecret, string tokenSecret)
+    public static string CreateAuthorizationHeader(
+        string httpMethod, 
+        string url, 
+        string consumerKey,
+        string token, 
+        string consumerSecret, 
+        string tokenSecret)
     {
-        var oauthSignatureMethod = "HMAC-SHA256";
-        var oauthParams = new Dictionary<string, string>
+        var uri = new Uri(url);
+        var oauthParams = new List<(string Name, string Value)>
         {
-            { "oauth_consumer_key", oauthConsumerKey },
-            { "oauth_nonce", oauthNonce },
-            { "oauth_signature_method", oauthSignatureMethod },
-            { "oauth_timestamp", oauthTimestamp },
-            { "oauth_token", oauthToken }
+            ("oauth_consumer_key", consumerKey),
+            ("oauth_nonce", Guid.NewGuid().ToString("N")),
+            ("oauth_signature_method", "HMAC-SHA256"),
+            ("oauth_timestamp", DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()),
+            ("oauth_token", token)
         };
+        
+        var signature = GenerateSignature(
+            httpMethod, 
+            uri, 
+            oauthParams.Concat(ParseQuery(uri.Query)), 
+            consumerSecret, 
+            tokenSecret);
 
-        var oauthSignature = GenerateOauthSignature(httpMethod, new Uri(url), oauthParams, consumerSecret, tokenSecret);
-        var authorizationHeader = new StringBuilder("OAuth ");
-        foreach (var param in oauthParams)
-        {
-            authorizationHeader.AppendFormat("{0}=\"{1}\", ", param.Key, Uri.EscapeDataString(param.Value));
-        }
-        authorizationHeader.AppendFormat("oauth_signature=\"{0}\"", Uri.EscapeDataString(oauthSignature));
-
-        return authorizationHeader.ToString();
+        var headerParams = oauthParams
+            .Append((Name: "oauth_signature", Value: signature))
+            .Select(x => $"{x.Name.Encode()}=\"{x.Value.Encode()}\"");
+        
+        return $"OAuth {string.Join(", ", headerParams)}";
     }
     
-    private static string GenerateOauthSignature(string httpMethod, Uri uri, Dictionary<string, string> oauthParams, string consumerSecret, string tokenSecret)
-    {
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-        foreach (var key in queryParams.AllKeys)
-        {
-            if (key is not null)
-            {
-                oauthParams.Add(key, queryParams[key]!);
-            }
-        }
-
-        var sortedParams = new SortedDictionary<string, string>(oauthParams);
-        var parameterString = new StringBuilder();
-        foreach (var param in sortedParams)
-        {
-            parameterString.Append($"{Uri.EscapeDataString(param.Key)}={Uri.EscapeDataString(param.Value)}&");
-        }
-        parameterString.Length--;
-
-        var signatureBaseString = $"{httpMethod.ToUpper()}&{Uri.EscapeDataString(uri.GetLeftPart(UriPartial.Path))}&{Uri.EscapeDataString(parameterString.ToString())}";
-        var signingKey = $"{Uri.EscapeDataString(consumerSecret)}&{Uri.EscapeDataString(tokenSecret)}";
-
-        using var hasher = new HMACSHA256(Encoding.ASCII.GetBytes(signingKey));
-        byte[] hashBytes = hasher.ComputeHash(Encoding.ASCII.GetBytes(signatureBaseString));
-        return Convert.ToBase64String(hashBytes);
+    private static string GenerateSignature(
+        string httpMethod, 
+        Uri uri, 
+        IEnumerable<(string Name, string Value)> parameters, 
+        string consumerSecret, 
+        string tokenSecret)
+    { 
+        var baseUrl = uri.GetLeftPart(UriPartial.Path);
+        string signatureBaseString = $"{httpMethod.ToUpperInvariant()}&{baseUrl.Encode()}&{NormalizeParameters(parameters).Encode()}";
+        string signingKey = $"{consumerSecret.Encode()}&{tokenSecret.Encode()}";
+        
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(signingKey));
+        byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(signatureBaseString));
+        return Convert.ToBase64String(hash);
     }
-
-    public static string GenerateTimestamp()
+    
+    private static IEnumerable<(string Name, string Value)> ParseQuery(string query)
     {
-        return DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        return query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(pair => pair.Split('=', 2))
+            .Select(parts => (
+                Name: WebUtility.UrlDecode(parts[0]),
+                Value: parts.Length > 1 ? WebUtility.UrlDecode(parts[1]) : string.Empty));
     }
-
-    public static string GenerateNonce()
+    
+    private static string NormalizeParameters(IEnumerable<(string Name, string Value)> parameters)
     {
-        return Guid.NewGuid().ToString("N");
+        return string.Join("&", parameters
+            .Select(p => (Name: p.Name.Encode(), Value: p.Value.Encode()))
+            .OrderBy(p => p.Name, StringComparer.Ordinal)
+            .ThenBy(p => p.Value, StringComparer.Ordinal)
+            .Select(p => $"{p.Name}={p.Value}"));
     }
 }
