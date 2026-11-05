@@ -1,4 +1,3 @@
-using Apps.Magento.Constants;
 using Apps.Magento.Extensions;
 using Apps.Magento.Invocables;
 using Apps.Magento.Models.Entities.Blocks;
@@ -7,10 +6,11 @@ using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Requests.Blocks;
 using Apps.Magento.Models.Responses;
 using Apps.Magento.Models.Responses.Blocks;
+using Apps.Magento.Services.Concrete;
+using Apps.Magento.Services.Models;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using RestSharp;
@@ -47,13 +47,11 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     [Action("Download block", Description = "Download block content")]
     public async Task<FileResponse> DownloadBlock([ActionParameter] BlockIdentifier identifier)
     {
-        var block = await Client.GetBlock(identifier.BlockId);
-
-        if (string.IsNullOrWhiteSpace(block.Content))
-            throw new PluginMisconfigurationException("The content of this block is empty.");
+        var service = new BlockService(InvocationContext);
+        var downloadRequest = new DownloadContentServiceRequest { ContentId = identifier.BlockId };
+        var downloadedFile = await service.DownloadContent(downloadRequest);
         
-        var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Block, identifier.BlockId, block.Content);
-        var file = await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{block.Identifier}.html");
+        var file = await fileManagementClient.UploadDownloadedFile(downloadedFile);
         return new(file);
     }
     

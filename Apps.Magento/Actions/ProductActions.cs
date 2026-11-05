@@ -8,11 +8,12 @@ using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Requests.Products;
 using Apps.Magento.Models.Responses;
 using Apps.Magento.Models.Responses.Products;
+using Apps.Magento.Services.Concrete;
+using Apps.Magento.Services.Models;
 using Apps.Magento.Utils;
 using Apps.Magento.Utils.Converters;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
@@ -66,12 +67,16 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] ProductIdentifier productIdentifier,
         [ActionParameter] DownloadProductRequest downloadProductRequest)
     {
-        var product = await Client.GetProduct(productIdentifier.Sku, storeViewIdentifier.StoreView);
+        var service = new ProductService(InvocationContext);
+        var downloadRequest = new DownloadContentServiceRequest
+        {
+            ContentId = productIdentifier.Sku,
+            CustomAttributes = downloadProductRequest.CustomAttributes,
+            StoreView = storeViewIdentifier.StoreView
+        };
+        var downloadedFile = await service.DownloadContent(downloadRequest);
         
-        var html = ProductConverter.ToHtml(product, downloadProductRequest.CustomAttributes?.ToList());
-        var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Product, productIdentifier.Sku, html);
-        
-        var file = await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{productIdentifier.Sku}.html");
+        var file = await fileManagementClient.UploadDownloadedFile(downloadedFile);
         return new(file);
     }
 

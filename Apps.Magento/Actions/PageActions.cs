@@ -7,10 +7,11 @@ using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Requests.Pages;
 using Apps.Magento.Models.Responses;
 using Apps.Magento.Models.Responses.Pages;
+using Apps.Magento.Services.Concrete;
+using Apps.Magento.Services.Models;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
@@ -47,13 +48,11 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     [Action("Download page", Description = "Download page content")]
     public async Task<FileResponse> DownloadPage([ActionParameter] PageIdentifier identifier)
     {
-        var page = await Client.GetPage(identifier.PageId);
+        var service = new PageService(InvocationContext);
+        var downloadRequest = new DownloadContentServiceRequest { ContentId = identifier.PageId };
+        var downloadedFile = await service.DownloadContent(downloadRequest);
         
-        if (string.IsNullOrWhiteSpace(page.Content))
-            throw new PluginMisconfigurationException("The content of this page is empty.");
-        
-        var htmlStream = HtmlHelper.ConvertToHtml(ContentTypeConstants.Page, identifier.PageId, page.Content);
-        var file = await fileManagementClient.UploadAsync(htmlStream, "text/html", $"{page.Identifier.Replace('/', '_')}.html");
+        var file = await fileManagementClient.UploadDownloadedFile(downloadedFile);
         return new(file);
     }
 
