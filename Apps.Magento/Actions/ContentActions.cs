@@ -5,13 +5,18 @@ using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Requests.Content;
 using Apps.Magento.Models.Responses.Content;
+using Apps.Magento.Models.Utility.Files;
 using Apps.Magento.Services;
 using Apps.Magento.Services.Models;
+using Apps.Magento.Utils;
 using Blackbird.Applications.SDK.Blueprints;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Filters.Constants;
 
 namespace Apps.Magento.Actions;
 
@@ -53,5 +58,54 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         
         var file = await fileManagementClient.UploadDownloadedFile(downloadedFile);
         return new(file);
+    }
+
+    [BlueprintActionDefinition(BlueprintAction.UploadContent)]
+    [Action("Upload content", Description = "Upload content")]
+    public async Task<UploadContentResponse> UploadContent(
+        [ActionParameter] ContentTypeOptionalIdentifier contentTypeIdentifier,  // For Content data handler in UploadContentRequest
+        [ActionParameter] UploadContentRequest input)
+    {
+        var loaded = await fileManagementClient.LoadContent(input.Content);
+        if (loaded.Transformation is null)
+            InvocationContext.Logger?.LogInformation("Not a Blackbird interoperable file", []);
+        
+        var htmlModel = HtmlHelper.ConvertFromHtml(loaded.Html);
+        
+        if (string.IsNullOrWhiteSpace(htmlModel.ContentType))
+            throw new PluginMisconfigurationException("Couldn't determine the content type from the file. Specify it in the input");
+        
+        string contentId = ContentResolver.ResolveContentId(input.ContentId, htmlModel.ResourceId, $"{htmlModel.ContentType} ID");
+        var service = ContentServiceFactory.Create(htmlModel.ContentType, InvocationContext);
+        var uploaded = await service.UploadContent(new(contentId, input.Locale, htmlModel.Content));
+
+        var outputFile = await BuildOutputFile(input, loaded, uploaded);
+        return new(outputFile);
+    }
+    
+    private async Task<FileReference> BuildOutputFile(UploadContentRequest input, LoadedContent loaded, UploadedContent uploaded)
+    {
+        if (loaded.Transformation is null)
+            return input.Content;
+
+        var transformation = loaded.Transformation;
+        transformation.TargetSystemReference.ContentId = uploaded.ContentId;
+        transformation.TargetSystemReference.ContentName = uploaded.ContentName;
+        transformation.TargetSystemReference.SystemName = "Adobe Commerce - Magento";
+        transformation.TargetSystemReference.SystemRef = "https://business.adobe.com/products/magento/magento-commerce.html";
+        transformation.TargetLanguage = input.Locale;
+
+        if (loaded.WasBilingual)
+            return await fileManagementClient.UploadAsync(transformation.ToStream(), MediaTypes.Xliff2, transformation.BilingualFileName);
+
+        var target = transformation.Target();
+        if (!target.Success)
+        {
+            InvocationContext.Logger?.LogError($"Failed to load target file: {target.Error}", []);
+            return input.Content;
+        }
+
+        target.Value.SystemReference = transformation.TargetSystemReference;
+        return await fileManagementClient.UploadAsync(target.Value.ToStream(), target.Value.OriginalMediaType, target.Value.OriginalName);
     }
 }

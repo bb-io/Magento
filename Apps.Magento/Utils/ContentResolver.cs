@@ -9,9 +9,9 @@ public static class ContentResolver
         string? idFromFile,
         string contentIdName)
     {
-        return idFromInput ?? 
-               idFromFile ?? 
-               throw new PluginMisconfigurationException(
-                   $"Couldn't find {contentIdName.Trim()} in the file. Please specify it manually in the optional input.");
+        return !string.IsNullOrWhiteSpace(idFromInput) ? idFromInput
+            : !string.IsNullOrWhiteSpace(idFromFile) ? idFromFile
+            : throw new PluginMisconfigurationException(
+                $"Couldn't find {contentIdName.Trim()} in the file. Please specify it manually in the optional input.");
     }
 }

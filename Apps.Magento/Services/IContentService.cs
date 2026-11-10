@@ -8,5 +8,6 @@ namespace Apps.Magento.Services;
 public interface IContentService
 {
     Task<List<ContentResponse>> SearchContent(SearchContentRequest input);
-    Task<DownloadedFile> DownloadContent(DownloadContentServiceRequest input);
+    Task<DownloadedContent> DownloadContent(DownloadContentServiceRequest input);
+    Task<UploadedContent> UploadContent(UploadContentServiceRequest input);
 }
