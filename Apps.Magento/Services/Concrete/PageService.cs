@@ -52,14 +52,6 @@ public class PageService(InvocationContext invocationContext) : BaseContentServi
         }
 
         var target = await FindPageInStoreView(source.Identifier, input.StoreView);
-
-        if (target?.Id == source.Id)
-        {
-            throw new PluginMisconfigurationException(
-                $"Page '{source.Identifier}' is assigned to all store views, so a translated copy can't be created. " +
-                "Assign the source page to a specific store view first.");
-        }
-
         if (target is null)
         {
             source.Content = input.Html;

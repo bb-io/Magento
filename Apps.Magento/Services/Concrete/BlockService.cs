@@ -52,14 +52,6 @@ public class BlockService(InvocationContext invocationContext) : BaseContentServ
         }
 
         var target = await FindBlockInStoreView(source.Identifier, input.StoreView);
-
-        if (target?.Id == source.Id)
-        {
-            throw new PluginMisconfigurationException(
-                $"Block '{source.Identifier}' is assigned to all store views, so a translated copy can't be created. " +
-                "Assign the source block to a specific store view first.");
-        }
-
         if (target is null)
         {
             source.Content = input.Html;
