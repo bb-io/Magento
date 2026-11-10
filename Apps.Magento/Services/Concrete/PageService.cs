@@ -30,7 +30,7 @@ public class PageService(InvocationContext invocationContext) : BaseContentServi
         return response.Select(x => new ContentResponse(x.Id, ContentType, x.Title, x.CreationTime, x.UpdateTime)).ToList();
     }
 
-    public async Task<DownloadedFile> DownloadContent(DownloadContentServiceRequest input)
+    public async Task<DownloadedContent> DownloadContent(DownloadContentServiceRequest input)
     {
         var page = await Client.GetPage(input.ContentId);
         if (string.IsNullOrWhiteSpace(page.Content))
@@ -38,5 +38,50 @@ public class PageService(InvocationContext invocationContext) : BaseContentServi
         
         var htmlStream = HtmlHelper.ConvertToHtml(ContentType, input.ContentId, page.Content);
         return new(htmlStream, "text/html", page.Identifier.ToHtmlFilename());
+    }
+
+    public async Task<UploadedContent> UploadContent(UploadContentServiceRequest input)
+    {
+        var source = await Client.GetPage(input.ContentId);
+
+        if (string.IsNullOrWhiteSpace(input.StoreView) || input.StoreView == "all")
+        {
+            source.Content = input.Html;
+            var updated = await Client.UpdatePage(source);
+            return new(updated.Id, updated.Title);
+        }
+
+        var target = await FindPageInStoreView(source.Identifier, input.StoreView);
+
+        if (target?.Id == source.Id)
+        {
+            throw new PluginMisconfigurationException(
+                $"Page '{source.Identifier}' is assigned to all store views, so a translated copy can't be created. " +
+                "Assign the source page to a specific store view first.");
+        }
+
+        if (target is null)
+        {
+            source.Content = input.Html;
+            var created = await Client.CreatePage(source, input.StoreView);
+            return new(created.Id, created.Title);
+        }
+
+        target.Content = input.Html;
+        var updatedTarget = await Client.UpdatePage(target, input.StoreView);
+        return new(updatedTarget.Id, updatedTarget.Title);
+    }
+
+    private async Task<PageEntity?> FindPageInStoreView(string identifier, string storeCode)
+    {
+        var storeView = await Client.GetStoreView(storeCode);
+
+        var request = new SearchCriteriaBuilder()
+            .WhereEqual(("identifier", identifier))
+            .WhereEqual(("store_id", storeView.Id))
+            .ApplyTo(new RestRequest("V1/cmsPage/search"));
+
+        var pages = await Client.Paginate<PageEntity>(request, maxPages: 1);
+        return pages.FirstOrDefault();
     }
 }

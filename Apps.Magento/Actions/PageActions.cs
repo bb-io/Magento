@@ -108,15 +108,15 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
     [Action("Upload page", Description = "Upload page content")]
     public async Task UploadPage(
         [ActionParameter] PageOptionalIdentifier pageIdentifier,
-        [ActionParameter] UploadPageRequest input)
+        [ActionParameter] UploadPageRequest input,
+        [ActionParameter] StoreViewWithAllOptionalIdentifier storeViewIdentifier)
     {
         var htmlModel = await fileManagementClient.DownloadHtml(input.File);
         string pageId = ContentResolver.ResolveContentId(pageIdentifier.PageId, htmlModel.ResourceId, "page ID");
-        
-        var page = await Client.GetPage(pageId);
-        page.Content = htmlModel.Content;
-        
-        await Client.UpdatePage(page);
+
+        var service = new PageService(InvocationContext);
+        var request = new UploadContentServiceRequest(pageId, storeViewIdentifier.StoreView, htmlModel.Content);
+        await service.UploadContent(request);
     }
 
     [Action("Delete page", Description = "Delete page by specified ID")]

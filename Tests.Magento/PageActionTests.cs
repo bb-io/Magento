@@ -87,9 +87,10 @@ public class PageActionTests : TestBase
         // Arrange
         var page = new PageOptionalIdentifier { PageId = "6" };
         var input = new UploadPageRequest { File = new FileReference { Name = "test.html" } };
+        var store = new StoreViewWithAllOptionalIdentifier { };
 
         // Act
-        await Actions.UploadPage(page, input);
+        await Actions.UploadPage(page, input, store);
     }
     
     [TestMethod]
