@@ -11,7 +11,6 @@ using Apps.Magento.Models.Responses.Products;
 using Apps.Magento.Services.Concrete;
 using Apps.Magento.Services.Models;
 using Apps.Magento.Utils;
-using Apps.Magento.Utils.Converters;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -144,7 +143,8 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
             }
         };
 
-        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{identifier.Sku}", Method.Put)
+        string endpoint = $"{StoreViewHelper.ForWrite(storeViewIdentifier.StoreView)}/V1/products/{identifier.Sku}";
+        var request = new RestRequest(endpoint, Method.Put)
             .WithJsonBody(body, JsonConfig.JsonSettings);
 
         var response = await Client.ExecuteWithErrorHandling<ProductEntity>(request);
@@ -157,29 +157,12 @@ public class ProductActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] UploadProductRequest input,
         [ActionParameter] ProductOptionalIdentifier productIdentifier)
     {
-        var htmlStream = await fileManagementClient.DownloadAsync(input.File);
-        string html = await new StreamReader(htmlStream).ReadToEndAsync();
-        
-        var htmlModel = HtmlHelper.ConvertFromHtml(html);
-        var productModel = ProductConverter.FromHtml(html);
+        var htmlModel = await fileManagementClient.DownloadHtml(input.File);
+        string sku = ContentResolver.ResolveContentId(productIdentifier.Sku, htmlModel.ResourceId, "product SKU");
 
-        string productSku = ContentResolver.ResolveContentId(productIdentifier.Sku, htmlModel.ResourceId, "product SKU");
-        
-        var product = await Client.GetProduct(productSku, storeViewIdentifier.ReadStoreView());
-        var customAttributes = productModel.CustomAttributes.Select(x => new CustomAttributeDto(x.AttributeCode, x.Value));
-
-        var body = new
-        {
-            product = new
-            {
-                sku = productSku,
-                name = string.IsNullOrWhiteSpace(productModel.Name) ? product.Name : productModel.Name,
-                custom_attributes = customAttributes.Select(x => new { attribute_code = x.AttributeCode, value = x.Value })
-            }
-        };
-
-        var request = new RestRequest($"{storeViewIdentifier}/V1/products/{productSku}", Method.Put).AddJsonBody(body);
-        await Client.ExecuteWithErrorHandling<ProductEntity>(request);
+        var service = new ProductService(InvocationContext);
+        var request = new UploadContentServiceRequest(sku, storeViewIdentifier.StoreView, htmlModel.Content);
+        await service.UploadContent(request);
     }
 
     [Action("Delete product", Description = "Delete product by specified SKU")]
