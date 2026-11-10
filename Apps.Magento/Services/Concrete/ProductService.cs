@@ -2,6 +2,7 @@ using Apps.Magento.Constants;
 using Apps.Magento.Extensions;
 using Apps.Magento.Models.Dtos;
 using Apps.Magento.Models.Entities.Products;
+using Apps.Magento.Models.Entities.StoreViews;
 using Apps.Magento.Models.Requests.Content;
 using Apps.Magento.Models.Responses.Content;
 using Apps.Magento.Models.Utility.Files;
@@ -38,12 +39,23 @@ public class ProductService(InvocationContext invocationContext) : BaseContentSe
 
     public async Task<DownloadedContent> DownloadContent(DownloadContentServiceRequest input)
     {
-        var product = await Client.GetProduct(input.ContentId, input.StoreView);
+        string contentId = input.ContentId;
+        
+        var storeView = StoreViewHelper.ForRead(input.StoreView);
+        var product = await Client.GetProduct(contentId, storeView);
+        var storeConfig = await Client.GetStoreConfig(storeView);
         
         var html = ProductConverter.ToHtml(product, input.CustomAttributes?.ToList());
-        var htmlStream = HtmlHelper.ConvertToHtml(ContentType, input.ContentId, html);
+        var metadata = new ContentMetadata(
+            ContentType,
+            contentId,
+            storeConfig.Language,
+            new Ucid(ContentType, contentId),
+            product.Name,
+            GetPublicUrl(product, storeConfig));
+        var htmlStream = HtmlHelper.ConvertToHtml(metadata, html);
         
-        return new(htmlStream, "text/html", input.ContentId.ToHtmlFilename());
+        return new(htmlStream, "text/html", product.Name.ToHtmlFilename(product.Sku));
     }
 
     public async Task<UploadedContent> UploadContent(UploadContentServiceRequest input)
@@ -68,5 +80,15 @@ public class ProductService(InvocationContext invocationContext) : BaseContentSe
 
         var updated = await Client.ExecuteWithErrorHandling<ProductEntity>(request);
         return new(updated.Sku, updated.Name);
+    }
+    
+    private static string? GetPublicUrl(ProductEntity product, StoreConfigEntity storeConfig)
+    {
+        const int notVisibleIndividually = 1;
+        var urlKey = product.GetAttributeValue("url_key");
+
+        return product.Visibility == notVisibleIndividually || urlKey is null
+            ? null
+            : $"{storeConfig.BaseLinkUrl}{urlKey}.html";
     }
 }

@@ -136,4 +136,13 @@ public static class ClientExtensions
         return storeViews.FirstOrDefault(x => x.Code == viewCode) ??
                throw new PluginMisconfigurationException($"Store view '{viewCode}' was not found");
     }
+    
+    public static async Task<StoreConfigEntity> GetStoreConfig(this ApiClient client, string storeCode)
+    {
+        var request = new RestRequest("V1/store/storeConfigs");
+        var configs = await client.ExecuteWithErrorHandling<List<StoreConfigEntity>>(request);
+
+        return configs.FirstOrDefault(x => x.Code == storeCode) ?? 
+               throw new PluginMisconfigurationException($"Store view '{storeCode}' was not found");
+    }
 }

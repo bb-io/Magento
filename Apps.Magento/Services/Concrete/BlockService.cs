@@ -32,12 +32,21 @@ public class BlockService(InvocationContext invocationContext) : BaseContentServ
 
     public async Task<DownloadedContent> DownloadContent(DownloadContentServiceRequest input)
     {
-        var block = await Client.GetBlock(input.ContentId);
+        string contentId = input.ContentId;
+        var block = await Client.GetBlock(contentId);
         if (string.IsNullOrWhiteSpace(block.Content))
             throw new PluginMisconfigurationException("The content of this block is empty.");
         
-        var htmlStream = HtmlHelper.ConvertToHtml(ContentType, input.ContentId, block.Content);
-        return new(htmlStream, "text/html", block.Identifier.ToHtmlFilename());
+        var storeConfig = await Client.GetStoreConfig(StoreViewHelper.ForRead(input.StoreView));
+        var metadata = new ContentMetadata(
+            ContentType,
+            contentId,
+            storeConfig.Language,
+            new Ucid(ContentType, block.Identifier),
+            block.Title);
+        
+        var htmlStream = HtmlHelper.ConvertToHtml(metadata, block.Content);
+        return new(htmlStream, "text/html", block.Title.ToHtmlFilename(block.Identifier));
     }
 
     public async Task<UploadedContent> UploadContent(UploadContentServiceRequest input)

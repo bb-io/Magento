@@ -2,6 +2,8 @@ namespace Apps.Magento.Extensions;
 
 public static class StringExtensions
 {
+    private static readonly char[] InvalidFileNameChars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+    
     public static string SanitizeCurlyBraces(this string source)
     {
         return source.Replace("{", "{{").Replace("}", "}}");
@@ -19,8 +21,10 @@ public static class StringExtensions
         return string.IsNullOrEmpty(search) || text.Contains(search, StringComparison.OrdinalIgnoreCase);
     }
 
-    public static string ToHtmlFilename(this string contentId)
+    public static string ToHtmlFilename(this string name, string fallback)
     {
-        return $"{contentId.Replace('/', '_')}.html";
+        string source = string.IsNullOrWhiteSpace(name) ? fallback : name;
+        string safe = string.Join("_", source.Split(InvalidFileNameChars)).Trim();
+        return $"{safe}.html";
     }
 }

@@ -1,6 +1,7 @@
 using Apps.Magento.Constants;
 using Apps.Magento.Extensions;
 using Apps.Magento.Models.Entities.Pages;
+using Apps.Magento.Models.Entities.StoreViews;
 using Apps.Magento.Models.Requests.Content;
 using Apps.Magento.Models.Responses.Content;
 using Apps.Magento.Models.Utility.Files;
@@ -32,12 +33,22 @@ public class PageService(InvocationContext invocationContext) : BaseContentServi
 
     public async Task<DownloadedContent> DownloadContent(DownloadContentServiceRequest input)
     {
-        var page = await Client.GetPage(input.ContentId);
+        string contentId = input.ContentId;
+        var page = await Client.GetPage(contentId);
         if (string.IsNullOrWhiteSpace(page.Content))
             throw new PluginMisconfigurationException("The content of this page is empty.");
         
-        var htmlStream = HtmlHelper.ConvertToHtml(ContentType, input.ContentId, page.Content);
-        return new(htmlStream, "text/html", page.Identifier.ToHtmlFilename());
+        var storeConfig = await Client.GetStoreConfig(StoreViewHelper.ForRead(input.StoreView));
+        var metadata = new ContentMetadata(
+            ContentType,
+            contentId,
+            storeConfig.Language,
+            new Ucid(ContentType, page.Identifier),
+            page.Title,
+            GetPublicUrl(page, storeConfig));
+        
+        var htmlStream = HtmlHelper.ConvertToHtml(metadata, page.Content);
+        return new(htmlStream, "text/html", page.Title.ToHtmlFilename(page.Identifier));
     }
 
     public async Task<UploadedContent> UploadContent(UploadContentServiceRequest input)
@@ -80,5 +91,15 @@ public class PageService(InvocationContext invocationContext) : BaseContentServi
 
         var pages = await Client.Paginate<PageEntity>(request, maxPages: 1);
         return pages.FirstOrDefault();
+    }
+    
+    private static string? GetPublicUrl(PageEntity page, StoreConfigEntity storeConfig)
+    {
+        return page.Identifier switch
+        {
+            "no-route" => null,
+            "home" => storeConfig.BaseLinkUrl,
+            _ => $"{storeConfig.BaseLinkUrl}{page.Identifier}"
+        };
     }
 }

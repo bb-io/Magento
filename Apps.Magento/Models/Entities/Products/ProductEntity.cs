@@ -53,4 +53,10 @@ public class ProductEntity
         var productCategoryIds = JsonConvert.DeserializeObject<List<string>>(attribute.Value)!;
         return categoryIds.All(productCategoryIds.Contains);
     }
+    
+    public string? GetAttributeValue(string code)
+    {
+        var value = CustomAttributes.FirstOrDefault(x => x.AttributeCode == code)?.Value;
+        return string.IsNullOrWhiteSpace(value) || value == "undefined" ? null : value;
+    }
 }

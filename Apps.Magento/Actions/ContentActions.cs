@@ -91,8 +91,8 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         var transformation = loaded.Transformation;
         transformation.TargetSystemReference.ContentId = uploaded.ContentId;
         transformation.TargetSystemReference.ContentName = uploaded.ContentName;
-        transformation.TargetSystemReference.SystemName = "Adobe Commerce - Magento";
-        transformation.TargetSystemReference.SystemRef = "https://business.adobe.com/products/magento/magento-commerce.html";
+        transformation.TargetSystemReference.SystemName = SystemConstants.Name;
+        transformation.TargetSystemReference.SystemRef = SystemConstants.Ref;
         transformation.TargetLanguage = input.Locale;
 
         if (loaded.WasBilingual)
