@@ -50,18 +50,23 @@ public class BlockService(InvocationContext invocationContext) : BaseContentServ
             var updated = await Client.UpdateBlock(source);
             return new(updated.Id, updated.Title);
         }
-
+        
         var target = await FindBlockInStoreView(source.Identifier, input.StoreView);
-        if (target is null)
-        {
-            source.Content = input.Html;
-            var created = await Client.CreateBlock(source, input.StoreView);
-            return new(created.Id, created.Title);
-        }
+        var block = target ?? source;
+        block.Content = input.Html;
 
-        target.Content = input.Html;
-        var updatedTarget = await Client.UpdateBlock(target, input.StoreView);
-        return new(updatedTarget.Id, updatedTarget.Title);
+        try
+        {
+            var saved = target is null
+                ? await Client.CreateBlock(block, input.StoreView)
+                : await Client.UpdateBlock(block, input.StoreView);
+
+            return new(saved.Id, saved.Title);
+        }
+        catch (PluginApplicationException ex) when (ex.Message.Contains("URL key for specified store already exists"))
+        {
+            throw new PluginMisconfigurationException(ErrorMessages.UrlKeyAlreadyExists(ContentType, source.Identifier, input.StoreView));
+        }
     }
 
     private async Task<BlockEntity?> FindBlockInStoreView(string identifier, string storeCode)

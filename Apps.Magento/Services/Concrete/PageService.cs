@@ -52,16 +52,21 @@ public class PageService(InvocationContext invocationContext) : BaseContentServi
         }
 
         var target = await FindPageInStoreView(source.Identifier, input.StoreView);
-        if (target is null)
-        {
-            source.Content = input.Html;
-            var created = await Client.CreatePage(source, input.StoreView);
-            return new(created.Id, created.Title);
-        }
+        var page = target ?? source;
+        page.Content = input.Html;
 
-        target.Content = input.Html;
-        var updatedTarget = await Client.UpdatePage(target, input.StoreView);
-        return new(updatedTarget.Id, updatedTarget.Title);
+        try
+        {
+            var saved = target is null
+                ? await Client.CreatePage(page, input.StoreView)
+                : await Client.UpdatePage(page, input.StoreView);
+
+            return new(saved.Id, saved.Title);
+        }
+        catch (PluginApplicationException ex) when (ex.Message.Contains("URL key for specified store already exists"))
+        {
+            throw new PluginMisconfigurationException(ErrorMessages.UrlKeyAlreadyExists(ContentType, source.Identifier, input.StoreView));
+        }
     }
 
     private async Task<PageEntity?> FindPageInStoreView(string identifier, string storeCode)
