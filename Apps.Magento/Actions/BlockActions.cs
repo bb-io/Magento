@@ -73,7 +73,7 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
             }
         };
         
-        var request = new RestRequest($"{viewIdentifier}/V1/cmsBlock", Method.Post).AddBody(body);
+        var request = new RestRequest($"{viewIdentifier.StoreView ?? "all"}/V1/cmsBlock", Method.Post).AddBody(body);
         var blockResponse = await Client.ExecuteWithErrorHandling<BlockEntity>(request);
         
         var createdBlock = await Client.GetBlock(blockResponse.Id);
@@ -98,16 +98,16 @@ public class BlockActions(InvocationContext invocationContext, IFileManagementCl
     
     [Action("Upload block", Description = "Upload content of a specific block")]
     public async Task UploadBlock(
-        [ActionParameter] UploadBlockRequest request,
-        [ActionParameter] BlockOptionalIdentifier blockIdentifier)
+        [ActionParameter] UploadBlockRequest input,
+        [ActionParameter] BlockOptionalIdentifier blockIdentifier,
+        [ActionParameter] StoreViewWithAllOptionalIdentifier storeViewIdentifier)
     {
-        var htmlModel = await fileManagementClient.DownloadHtml(request.File);
+        var htmlModel = await fileManagementClient.DownloadHtml(input.File);
         string blockId = ContentResolver.ResolveContentId(blockIdentifier.BlockId, htmlModel.ResourceId, "block ID");
-        
-        var block = await Client.GetBlock(blockId);
-        block.Content = htmlModel.Content;
-        
-        await Client.UpdateBlock(block);
+
+        var service = new BlockService(InvocationContext);
+        var request = new UploadContentServiceRequest(blockId, storeViewIdentifier.StoreView, htmlModel.Content);
+        await service.UploadContent(request);
     }
     
     [Action("Delete block", Description = "Delete block by specified ID")]

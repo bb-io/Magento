@@ -64,9 +64,10 @@ public class BlockActionTests : TestBase
         // Arrange
         var input = new UploadBlockRequest { File = new FileReference { Name = "test.html" } };
         var identifier = new BlockOptionalIdentifier { };
+        var store = new StoreViewWithAllOptionalIdentifier { };
 
         // Act
-        await Actions.UploadBlock(input, identifier);
+        await Actions.UploadBlock(input, identifier, store);
     }
     
     [TestMethod]

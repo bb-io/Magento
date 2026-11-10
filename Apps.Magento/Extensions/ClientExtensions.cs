@@ -31,7 +31,7 @@ public static class ClientExtensions
         return client.ExecuteWithErrorHandling<BlockEntity>(request);
     }
     
-    public static async Task<BlockEntity> UpdateBlock(this ApiClient client, BlockEntity block)
+    public static async Task<BlockEntity> UpdateBlock(this ApiClient client, BlockEntity block, string? storeCode = null)
     {
         var body = new
         {
@@ -45,9 +45,28 @@ public static class ClientExtensions
             }
         };
 
-        var request = new RestRequest($"V1/cmsBlock/{block.Id}", Method.Put).WithJsonBody(body, JsonConfig.JsonSettings);
+        var request = new RestRequest($"{storeCode}/V1/cmsBlock/{block.Id}", Method.Put).WithJsonBody(body, JsonConfig.JsonSettings);
         await client.ExecuteWithErrorHandling(request);
         return await client.GetBlock(block.Id); // Refetching so that the UpdatedAt property populates
+    }
+    
+    public static async Task<BlockEntity> CreateBlock(this ApiClient client, BlockEntity block, string storeCode)
+    {
+        var body = new
+        {
+            block = new
+            {
+                identifier = block.Identifier,
+                title = block.Title,
+                content = block.Content,
+                active = block.Active
+            }
+        };
+
+        var request = new RestRequest($"{storeCode}/V1/cmsBlock", Method.Post).WithJsonBody(body, JsonConfig.JsonSettings);
+
+        var created = await client.ExecuteWithErrorHandling<BlockEntity>(request);
+        return await client.GetBlock(created.Id);
     }
 
     public static Task<PageEntity> GetPage(this ApiClient client, string pageId)
@@ -56,7 +75,7 @@ public static class ClientExtensions
         return client.ExecuteWithErrorHandling<PageEntity>(request);
     }
     
-    public static async Task<PageEntity> UpdatePage(this ApiClient client, PageEntity page)
+    public static async Task<PageEntity> UpdatePage(this ApiClient client, PageEntity page, string? storeCode = null)
     {
         var body = new
         {
@@ -76,9 +95,32 @@ public static class ClientExtensions
             }
         };
 
-        var request = new RestRequest($"V1/cmsPage/{page.Id}", Method.Put).WithJsonBody(body, JsonConfig.JsonSettings);
+        var request = new RestRequest($"{storeCode}/V1/cmsPage/{page.Id}", Method.Put).WithJsonBody(body, JsonConfig.JsonSettings);
         await client.ExecuteWithErrorHandling(request);
         return await client.GetPage(page.Id);   // Refetching so that the UpdatedAt property populates
+    }
+    
+    public static async Task<PageEntity> CreatePage(this ApiClient client, PageEntity page, string storeCode)
+    {
+        var body = new
+        {
+            page = new
+            {
+                identifier = page.Identifier,
+                title = page.Title,
+                page_layout = page.PageLayout,
+                meta_title = page.MetaTitle,
+                meta_keywords = page.MetaKeywords,
+                meta_description = page.MetaDescription,
+                content_heading = page.ContentHeading,
+                content = page.Content,
+                active = page.Active
+            }
+        };
+
+        var request = new RestRequest($"{storeCode}/V1/cmsPage", Method.Post).WithJsonBody(body, JsonConfig.JsonSettings);
+        var created = await client.ExecuteWithErrorHandling<PageEntity>(request);
+        return await client.GetPage(created.Id);    // Refetching so that timestamps populate
     }
 
     public static async Task<IEnumerable<StoreViewEntity>> ListStoreViews(this ApiClient client)
