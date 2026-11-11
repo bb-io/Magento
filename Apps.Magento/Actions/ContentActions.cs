@@ -63,7 +63,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     [BlueprintActionDefinition(BlueprintAction.UploadContent)]
     [Action("Upload content", Description = "Upload content")]
     public async Task<UploadContentResponse> UploadContent(
-        [ActionParameter] ContentTypeOptionalIdentifier contentTypeIdentifier,  // For Content data handler in UploadContentRequest
+        [ActionParameter] ContentTypeOptionalIdentifier contentTypeIdentifier,
         [ActionParameter] UploadContentRequest input)
     {
         var loaded = await fileManagementClient.LoadContent(input.Content);
@@ -72,11 +72,12 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         
         var htmlModel = HtmlHelper.ConvertFromHtml(loaded.Html);
         
-        if (string.IsNullOrWhiteSpace(htmlModel.ContentType))
+        string? contentType = contentTypeIdentifier.ContentType ?? htmlModel.ContentType;
+        if (string.IsNullOrWhiteSpace(contentType))
             throw new PluginMisconfigurationException("Couldn't determine the content type from the file. Specify it in the input");
         
-        string contentId = ContentResolver.ResolveContentId(input.ContentId, htmlModel.ResourceId, $"{htmlModel.ContentType} ID");
-        var service = ContentServiceFactory.Create(htmlModel.ContentType, InvocationContext);
+        string contentId = ContentResolver.ResolveContentId(input.ContentId, htmlModel.ResourceId, $"{contentType} ID");
+        var service = ContentServiceFactory.Create(contentType, InvocationContext);
         var uploaded = await service.UploadContent(new(contentId, input.Locale, htmlModel.Content));
 
         var outputFile = await BuildOutputFile(input, loaded, uploaded);
@@ -88,12 +89,14 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         if (loaded.Transformation is null)
             return input.Content;
 
+        var storeConfig = await Client.GetStoreConfig(StoreViewHelper.ForRead(input.Locale));
+        
         var transformation = loaded.Transformation;
-        transformation.TargetSystemReference.ContentId = uploaded.ContentId;
+        transformation.TargetSystemReference.ContentId = uploaded.Ucid.ToString();
         transformation.TargetSystemReference.ContentName = uploaded.ContentName;
         transformation.TargetSystemReference.SystemName = SystemConstants.Name;
         transformation.TargetSystemReference.SystemRef = SystemConstants.Ref;
-        transformation.TargetLanguage = input.Locale;
+        transformation.TargetLanguage = storeConfig.Language;
 
         if (loaded.WasBilingual)
             return await fileManagementClient.UploadAsync(transformation.ToStream(), MediaTypes.Xliff2, transformation.BilingualFileName);
