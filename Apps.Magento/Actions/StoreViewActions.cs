@@ -32,7 +32,8 @@ public class StoreViewActions(InvocationContext invocationContext) : AppInvocabl
         return new(storeView);
     }
 
-    [Action("Create store view", Description = "Create a new store view")]
+    [Action("Create store view", Description = 
+        "Create a new store view. Requires the Blackbird Store Provisioning extension to be installed on the Magento instance")]
     public async Task<StoreViewResponse> CreateStoreView([ActionParameter] CreateStoreViewRequest input)
     {
         var body = new

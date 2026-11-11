@@ -20,7 +20,7 @@ using RestSharp;
 
 namespace Apps.Magento.Actions;
 
-[ActionList("Product")]
+[ActionList("Products")]
 public class ProductActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : AppInvocable(invocationContext)
 {
