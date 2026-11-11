@@ -1,4 +1,5 @@
 using System.Net;
+using Apps.Magento.Constants;
 using Apps.Magento.Models;
 using Apps.Magento.Models.Entities.Products;
 using HtmlAgilityPack;
@@ -7,12 +8,8 @@ namespace Apps.Magento.Utils.Converters;
 
 public static class ProductConverter
 {
-    private const string AttributeCodeAttr = "data-attribute-code";
-    private const string FormatAttr = "data-format";
-    private const string HtmlFormat = "html";
-    private const string FieldAttr = "data-field";
-    
     private static readonly HashSet<string> DefaultAttributes = ["meta_title", "meta_description", "meta_keyword", "description"];
+    private static readonly HashSet<string> SizeLimitedAttributes = ["meta_title", "meta_description"]; // These are max 255 chars
     
     public static string ToHtml(ProductEntity product, List<string>? customAttributes)
     {
@@ -24,18 +21,23 @@ public static class ProductConverter
         var root = doc.DocumentNode;
 
         var nameNode = doc.CreateElement("h1");
-        nameNode.SetAttributeValue(FieldAttr, "name");
+        nameNode.SetAttributeValue(HtmlConstants.FieldAttr, "name");
+        nameNode.SetAttributeValue(HtmlConstants.KeyAttr, $"{product.Sku}-name");
+        nameNode.SetAttributeValue(HtmlConstants.SizeAttr, HtmlConstants.VarcharLimit);
         nameNode.InnerHtml = WebUtility.HtmlEncode(product.Name);
-        root.AppendChild(nameNode);
 
         foreach (var attribute in product.CustomAttributes.Where(x => attributesToInclude.Contains(x.AttributeCode)))
         {
             var node = doc.CreateElement("div");
-            node.SetAttributeValue(AttributeCodeAttr, attribute.AttributeCode);
+            node.SetAttributeValue(HtmlConstants.AttributeCodeAttr, attribute.AttributeCode);
+            node.SetAttributeValue(HtmlConstants.KeyAttr, $"{product.Sku}-{attribute.AttributeCode}");
+            if (SizeLimitedAttributes.Contains(attribute.AttributeCode))
+                node.SetAttributeValue(HtmlConstants.SizeAttr, HtmlConstants.VarcharLimit);
+            
             node.InnerHtml = attribute.Value;
 
             if (node.Descendants().Any(x => x.NodeType == HtmlNodeType.Element))
-                node.SetAttributeValue(FormatAttr, HtmlFormat);
+                node.SetAttributeValue(HtmlConstants.FormatAttr, HtmlConstants.HtmlFormat);
             else
                 node.InnerHtml = WebUtility.HtmlEncode(attribute.Value);
 
@@ -50,16 +52,16 @@ public static class ProductConverter
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
 
-        var nameNode = doc.DocumentNode.SelectSingleNode($"//h1[@{FieldAttr}='name']") ?? 
+        var nameNode = doc.DocumentNode.SelectSingleNode($"//h1[@{HtmlConstants.FieldAttr}='name']") ?? 
                        doc.DocumentNode.SelectSingleNode("//h1");
         
         var name = WebUtility.HtmlDecode(nameNode?.InnerHtml.Trim() ?? string.Empty);
 
-        var attributes = doc.DocumentNode.SelectNodes($"//div[@{AttributeCodeAttr}]")?
+        var attributes = doc.DocumentNode.SelectNodes($"//div[@{HtmlConstants.AttributeCodeAttr}]")?
             .Select(node => new CustomAttributeEntity
             {
-                AttributeCode = node.GetAttributeValue(AttributeCodeAttr, string.Empty).Trim(),
-                Value = node.GetAttributeValue(FormatAttr, string.Empty) == HtmlFormat
+                AttributeCode = node.GetAttributeValue(HtmlConstants.AttributeCodeAttr, string.Empty).Trim(),
+                Value = node.GetAttributeValue(HtmlConstants.FormatAttr, string.Empty) == HtmlConstants.HtmlFormat
                     ? node.InnerHtml.Trim()
                     : WebUtility.HtmlDecode(node.InnerHtml.Trim())
             })
