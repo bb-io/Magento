@@ -34,6 +34,10 @@ public class BlockService(InvocationContext invocationContext) : BaseContentServ
     {
         string contentId = input.ContentId;
         var block = await Client.GetBlock(contentId);
+        
+        if (!string.IsNullOrWhiteSpace(input.StoreView) && input.StoreView != "all")
+            block = await FindBlockInStoreView(block.Identifier, input.StoreView) ?? block;
+        
         if (string.IsNullOrWhiteSpace(block.Content))
             throw new PluginMisconfigurationException("The content of this block is empty.");
         

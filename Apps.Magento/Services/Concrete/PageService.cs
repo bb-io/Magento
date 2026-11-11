@@ -35,6 +35,10 @@ public class PageService(InvocationContext invocationContext) : BaseContentServi
     {
         string contentId = input.ContentId;
         var page = await Client.GetPage(contentId);
+        
+        if (!string.IsNullOrWhiteSpace(input.StoreView) && input.StoreView != "all")
+            page = await FindPageInStoreView(page.Identifier, input.StoreView) ?? page;
+        
         if (string.IsNullOrWhiteSpace(page.Content))
             throw new PluginMisconfigurationException("The content of this page is empty.");
         
