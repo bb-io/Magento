@@ -59,7 +59,7 @@ public class PageService(InvocationContext invocationContext) : BaseContentServi
         {
             source.Content = input.Html;
             var updated = await Client.UpdatePage(source);
-            return new(updated.Id, updated.Title);
+            return new(new Ucid(ContentType, updated.Identifier), updated.Title);
         }
 
         var target = await FindPageInStoreView(source.Identifier, input.StoreView);
@@ -72,7 +72,7 @@ public class PageService(InvocationContext invocationContext) : BaseContentServi
                 ? await Client.CreatePage(page, input.StoreView)
                 : await Client.UpdatePage(page, input.StoreView);
 
-            return new(saved.Id, saved.Title);
+            return new(new Ucid(ContentType, saved.Identifier), saved.Title);
         }
         catch (PluginApplicationException ex) when (ex.Message.Contains("URL key for specified store already exists"))
         {

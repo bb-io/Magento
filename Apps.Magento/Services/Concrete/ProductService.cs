@@ -79,7 +79,7 @@ public class ProductService(InvocationContext invocationContext) : BaseContentSe
         var request = new RestRequest(endpoint, Method.Put).WithJsonBody(body, JsonConfig.JsonSettings);
 
         var updated = await Client.ExecuteWithErrorHandling<ProductEntity>(request);
-        return new(updated.Sku, updated.Name);
+        return new(new Ucid(ContentType, updated.Sku), updated.Name);
     }
     
     private static string? GetPublicUrl(ProductEntity product, StoreConfigEntity storeConfig)

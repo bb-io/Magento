@@ -57,7 +57,7 @@ public class BlockService(InvocationContext invocationContext) : BaseContentServ
         {
             source.Content = input.Html;
             var updated = await Client.UpdateBlock(source);
-            return new(updated.Id, updated.Title);
+            return new(new Ucid(ContentType, updated.Identifier), updated.Title);
         }
         
         var target = await FindBlockInStoreView(source.Identifier, input.StoreView);
@@ -70,7 +70,7 @@ public class BlockService(InvocationContext invocationContext) : BaseContentServ
                 ? await Client.CreateBlock(block, input.StoreView)
                 : await Client.UpdateBlock(block, input.StoreView);
 
-            return new(saved.Id, saved.Title);
+            return new(new Ucid(ContentType, saved.Identifier), saved.Title);
         }
         catch (PluginApplicationException ex) when (ex.Message.Contains("URL key for specified store already exists"))
         {
