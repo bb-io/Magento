@@ -30,14 +30,8 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] ContentTypesOptionalIdentifier contentTypesIdentifier,
         [ActionParameter] SearchContentRequest input)
     {
-        var contentTypes = contentTypesIdentifier.ContentTypes ?? ContentTypeConstants.SupportedContentTypes;
-        var services = ContentServiceFactory.CreateMultiple(contentTypes.Distinct(), InvocationContext);
-
-        var searchTasks = services.Select(x => x.SearchContent(input));
-        var searchResults = await Task.WhenAll(searchTasks);
-        var resultsList = searchResults.SelectMany(x => x).ToList();
-
-        return new(resultsList);
+        var result = await ContentHelper.Search(contentTypesIdentifier.ContentTypes, input, InvocationContext);
+        return new(result);
     }
 
     [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
