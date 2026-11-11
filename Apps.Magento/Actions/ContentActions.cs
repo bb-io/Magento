@@ -109,6 +109,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         }
 
         target.Value.SystemReference = transformation.TargetSystemReference;
+        target.Value.Language = transformation.TargetLanguage;
         return await fileManagementClient.UploadAsync(target.Value.ToStream(), target.Value.OriginalMediaType, target.Value.OriginalName);
     }
 }
