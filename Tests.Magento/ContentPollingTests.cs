@@ -1,3 +1,4 @@
+using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Polling;
 using Apps.Magento.Polling.Models;
@@ -20,9 +21,10 @@ public class ContentPollingTests : TestBase
         var request = new PollingEventRequest<DateMemory> { Memory = memory };
         var contentTypes = new ContentTypesOptionalIdentifier { };
         var input = new OnContentCreatedOrUpdatedRequest { };
+        var store = new StoreViewIdentifier { StoreView = "default" };
 
         // Act
-        var result = await Polling.OnContentCreatedOrUpdated(request, contentTypes, input);
+        var result = await Polling.OnContentCreatedOrUpdated(request, contentTypes, input, store);
 
         // Assert
         PrintJsonResult(result);

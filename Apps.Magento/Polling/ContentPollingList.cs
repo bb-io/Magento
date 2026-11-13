@@ -1,4 +1,5 @@
 using Apps.Magento.Invocables;
+using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Requests.Content;
 using Apps.Magento.Models.Responses.Content;
@@ -20,7 +21,8 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
     public async Task<PollingEventResponse<DateMemory, List<ContentResponse>>> OnContentCreatedOrUpdated(
         PollingEventRequest<DateMemory> pollingRequest,
         [PollingEventParameter] ContentTypesOptionalIdentifier contentTypesIdentifier,
-        [PollingEventParameter] OnContentCreatedOrUpdatedRequest input)
+        [PollingEventParameter] OnContentCreatedOrUpdatedRequest input,
+        [PollingEventParameter] StoreViewIdentifier storeViewIdentifier)
     {
         var pollingStart = PollingEventResults.PollingStart;
 
@@ -31,6 +33,7 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
         {
             NameContains = input.NameContains,
             UpdatedAfter = pollingRequest.Memory.LastInteractionDate,
+            StoreView = storeViewIdentifier.StoreView
         };
         var result = await ContentHelper.Search(contentTypesIdentifier.ContentTypes, searchContentRequest, InvocationContext);
         
