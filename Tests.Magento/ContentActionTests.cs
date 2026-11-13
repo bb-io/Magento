@@ -16,8 +16,11 @@ public class ContentActionTests : TestBase
     public async Task SearchContent_AllContentTypes_ReturnsContent()
     {
         // Arrange
-        var types = new ContentTypesOptionalIdentifier { };
-        var input = new SearchContentRequest { };
+        var types = new ContentTypesOptionalIdentifier { ContentTypes = [ContentTypeConstants.Page] };
+        var input = new SearchContentRequest
+        {
+            StoreView = "fr"
+        };
 
         // Act
         var result = await Actions.SearchContent(types, input);

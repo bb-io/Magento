@@ -17,6 +17,15 @@ public static class PollingEventResults
         };
     }
     
+    public static PollingEventResponse<TMemory, TResult> NoFlight<TMemory, TResult>(TMemory memory)
+    {
+        return new()
+        {
+            FlyBird = false,
+            Memory = memory,
+        };
+    }
+    
     public static PollingEventResponse<DateMemory, T> Flight<T>(T result, DateTime pollingStart)
     {
         return new()

@@ -18,7 +18,7 @@ public class ProductActionTests : TestBase
     {
         // Arrange
         var storeView = new StoreViewOptionalIdentifier { };
-        var input = new SearchProductsRequest { NameContains = "aul" };
+        var input = new SearchProductsRequest { NameContains = "my test product" };
 
         // Act
         var result = await Actions.SearchProducts(storeView, input);

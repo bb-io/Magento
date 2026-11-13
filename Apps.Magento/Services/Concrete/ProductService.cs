@@ -5,7 +5,7 @@ using Apps.Magento.Models.Entities.Products;
 using Apps.Magento.Models.Entities.StoreViews;
 using Apps.Magento.Models.Requests.Content;
 using Apps.Magento.Models.Responses.Content;
-using Apps.Magento.Models.Utility.Files;
+using Apps.Magento.Models.Utility.Content;
 using Apps.Magento.Services.Models;
 using Apps.Magento.Utils;
 using Apps.Magento.Utils.Converters;
@@ -21,19 +21,7 @@ public class ProductService(InvocationContext invocationContext) : BaseContentSe
     
     public async Task<List<ContentResponse>> SearchContent(SearchContentRequest input)
     {
-        RestRequest request = new SearchCriteriaBuilder()
-            .WhereContains(("name", input.NameContains))
-            .WhereLessThan(("created_at", input.CreatedBefore))
-            .WhereGreaterThan(("created_at", input.CreatedAfter))
-            .WhereLessThan(("updated_at", input.UpdatedBefore))
-            .WhereGreaterThan(("updated_at", input.UpdatedAfter))
-            .ApplyTo(new RestRequest($"{input.StoreView}/V1/products"));
-        
-        var products = await Client.Paginate<ProductEntity>(request);
-
-        if (input.CategoryIds != null)
-            products = products.Where(x => x.IsInAllCategories(input.CategoryIds));
-
+        var products = await SearchProducts(input);
         return products.Select(x => new ContentResponse(x.Sku, ContentType, x.Name, x.CreatedAt, x.UpdatedAt)).ToList();
     }
 
@@ -80,6 +68,49 @@ public class ProductService(InvocationContext invocationContext) : BaseContentSe
 
         var updated = await Client.ExecuteWithErrorHandling<ProductEntity>(request);
         return new(new Ucid(ContentType, updated.Sku), updated.Name);
+    }
+    
+    public async Task<PolledContent> PollContent(PollContentServiceRequest input)
+    {
+        var products = await SearchProducts(new SearchContentRequest
+        {
+            NameContains = input.NameContains,
+            UpdatedAfter = input.UpdatedAfter,
+            StoreView = input.StoreView
+        });
+
+        var hashes = new Dictionary<string, string>();
+        var changed = new List<ContentResponse>();
+
+        foreach (var product in products)
+        {
+            var key = new Ucid(ContentType, product.Sku).ToString();
+            var hash = HashHelper.Sha256(ProductConverter.ToHtml(product, null));
+            hashes[key] = hash;
+
+            if (!input.PreviousHashes.TryGetValue(key, out var previous) || previous != hash)
+                changed.Add(product.ToContentResponse(ContentType));
+        }
+
+        return new(changed, hashes);
+    }
+    
+    private async Task<IEnumerable<ProductEntity>> SearchProducts(SearchContentRequest input)
+    {
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereContains(("name", input.NameContains))
+            .WhereLessThan(("created_at", input.CreatedBefore))
+            .WhereGreaterThan(("created_at", input.CreatedAfter))
+            .WhereLessThan(("updated_at", input.UpdatedBefore))
+            .WhereGreaterThan(("updated_at", input.UpdatedAfter))
+            .ApplyTo(new RestRequest($"{input.StoreView}/V1/products"));
+        
+        var products = await Client.Paginate<ProductEntity>(request);
+
+        if (input.CategoryIds != null)
+            products = products.Where(x => x.IsInAllCategories(input.CategoryIds));
+
+        return products;
     }
     
     private static string? GetPublicUrl(ProductEntity product, StoreConfigEntity storeConfig)
