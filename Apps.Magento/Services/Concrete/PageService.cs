@@ -19,16 +19,39 @@ public class PageService(InvocationContext invocationContext) : BaseContentServi
     
     public async Task<List<ContentResponse>> SearchContent(SearchContentRequest input)
     {
-        RestRequest request = new SearchCriteriaBuilder()
+        var pages = string.IsNullOrWhiteSpace(input.StoreView) || input.StoreView == "all"
+            ? await SearchPages(input, storeId: null)
+            : await SearchPagesVisibleIn(input, input.StoreView);
+
+        return pages.Select(x => new ContentResponse(x.Id, ContentType, x.Title, x.CreationTime, x.UpdateTime)).ToList();
+    }
+
+    private async Task<IEnumerable<PageEntity>> SearchPagesVisibleIn(SearchContentRequest input, string storeCode)
+    {
+        var storeView = await Client.GetStoreView(storeCode);
+
+        // Items visible in a store view = assigned to it + assigned to 'All Store Views' (ID = 0)
+        // Magento store filter only matches the exact store so ask for both and merge
+        var storeSpecificTask = SearchPages(input, storeView.Id);
+        var allStoreViewsTask = SearchPages(input, "0");
+        await Task.WhenAll(storeSpecificTask, allStoreViewsTask);
+        
+        // Store-specific copies come first, so they win over the 'All Store Views' item with the same identifier
+        return storeSpecificTask.Result.Concat(allStoreViewsTask.Result).DistinctBy(x => x.Identifier);
+    }
+
+    private Task<IEnumerable<PageEntity>> SearchPages(SearchContentRequest input, string? storeId)
+    {
+        var request = new SearchCriteriaBuilder()
             .WhereContains(("title", input.NameContains))
             .WhereLessThan(("creation_time", input.CreatedBefore))
             .WhereGreaterThan(("creation_time", input.CreatedAfter))
             .WhereLessThan(("update_time", input.UpdatedBefore))
             .WhereGreaterThan(("update_time", input.UpdatedAfter))
+            .WhereEqual(("store_id", storeId))
             .ApplyTo(new RestRequest("V1/cmsPage/search"));
-        
-        var response = await Client.Paginate<PageEntity>(request);
-        return response.Select(x => new ContentResponse(x.Id, ContentType, x.Title, x.CreationTime, x.UpdateTime)).ToList();
+
+        return Client.Paginate<PageEntity>(request);
     }
 
     public async Task<DownloadedContent> DownloadContent(DownloadContentServiceRequest input)
