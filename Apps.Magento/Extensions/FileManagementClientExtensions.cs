@@ -1,5 +1,5 @@
 using Apps.Magento.Models;
-using Apps.Magento.Models.Utility.Files;
+using Apps.Magento.Models.Utility.Content;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;

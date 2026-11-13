@@ -4,7 +4,7 @@ using Apps.Magento.Models.Entities.Pages;
 using Apps.Magento.Models.Entities.StoreViews;
 using Apps.Magento.Models.Requests.Content;
 using Apps.Magento.Models.Responses.Content;
-using Apps.Magento.Models.Utility.Files;
+using Apps.Magento.Models.Utility.Content;
 using Apps.Magento.Services.Models;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common.Exceptions;

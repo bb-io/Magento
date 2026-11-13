@@ -1,3 +1,4 @@
+using Apps.Magento.Models.Responses.Content;
 using Apps.Magento.Utils;
 using Newtonsoft.Json;
 
@@ -59,4 +60,6 @@ public class ProductEntity
         var value = CustomAttributes.FirstOrDefault(x => x.AttributeCode == code)?.Value;
         return string.IsNullOrWhiteSpace(value) || value == "undefined" ? null : value;
     }
+    
+    public ContentResponse ToContentResponse(string contentType) => new(Sku, contentType, Name, CreatedAt, UpdatedAt);
 }

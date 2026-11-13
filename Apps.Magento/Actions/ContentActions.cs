@@ -5,7 +5,7 @@ using Apps.Magento.Models.Identifiers;
 using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Requests.Content;
 using Apps.Magento.Models.Responses.Content;
-using Apps.Magento.Models.Utility.Files;
+using Apps.Magento.Models.Utility.Content;
 using Apps.Magento.Services;
 using Apps.Magento.Services.Models;
 using Apps.Magento.Utils;

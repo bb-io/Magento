@@ -1,6 +1,6 @@
 using Apps.Magento.Utils;
 
-namespace Apps.Magento.Models.Utility.Files;
+namespace Apps.Magento.Models.Utility.Content;
 
 public record ContentMetadata(
     string ContentType, 

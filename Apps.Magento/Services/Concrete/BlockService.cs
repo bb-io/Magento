@@ -3,7 +3,7 @@ using Apps.Magento.Extensions;
 using Apps.Magento.Models.Entities.Blocks;
 using Apps.Magento.Models.Requests.Content;
 using Apps.Magento.Models.Responses.Content;
-using Apps.Magento.Models.Utility.Files;
+using Apps.Magento.Models.Utility.Content;
 using Apps.Magento.Services.Models;
 using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common.Exceptions;

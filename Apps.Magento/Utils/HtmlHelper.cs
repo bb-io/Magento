@@ -2,7 +2,7 @@ using System.Text;
 using Apps.Magento.Constants;
 using Apps.Magento.Extensions;
 using Apps.Magento.Models;
-using Apps.Magento.Models.Utility.Files;
+using Apps.Magento.Models.Utility.Content;
 using HtmlAgilityPack;
 
 namespace Apps.Magento.Utils;
