@@ -1,111 +1,59 @@
-using System.Text;
-using Apps.Magento.Api;
 using Apps.Magento.Invocables;
-using Apps.Magento.Models.Identifiers;
-using Apps.Magento.Models.Requests;
+using Apps.Magento.Models.Entities.Pages;
 using Apps.Magento.Models.Responses.Pages;
 using Apps.Magento.Polling.Models;
+using Apps.Magento.Utils;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
 using RestSharp;
 
 namespace Apps.Magento.Polling;
 
-[PollingEventList]
+[PollingEventList("Pages")]
 public class PagePollingList(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
-    [PollingEvent("On pages created", "Triggered when new pages are created")]
-    public async Task<PollingEventResponse<DateMemory, PagesResponse>> OnPagesCreated(
-        PollingEventRequest<DateMemory> request)
+    [MultipleEvents, PollingEvent("On page created", "Triggered when a new page is created")]
+    public async Task<PollingEventResponse<DateMemory, List<PageResponse>>> OnPageCreated(
+        PollingEventRequest<DateMemory> pollingRequest)
     {
-        if (request.Memory is null)
-        {
-            return new()
-            {
-                FlyBird = false,
-                Memory = new()
-                {
-                    LastInteractionDate = DateTime.UtcNow
-                }
-            };
-        }
+        var pollingStart = PollingEventResults.PollingStart;
         
-        var pages = await GetPages(new BaseFilterRequest { CreatedAt = request.Memory.LastInteractionDate });
-        return new()
-        {
-            FlyBird = pages.Items.Any(),
-            Result = pages,
-            Memory = new()
-            {
-                LastInteractionDate = DateTime.UtcNow
-            }
-        };
+        if (pollingRequest.Memory is null)
+            return PollingEventResults.NoFlight<List<PageResponse>>(pollingStart);
+        
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereGreaterThan(("creation_time", pollingRequest.Memory.LastInteractionDate))
+            .ApplyTo(new RestRequest("V1/cmsPage/search"));
+        
+        var response = await Client.Paginate<PageEntity>(request);
+        var responseList = response.ToList();
+        if (responseList.Count == 0)
+            return PollingEventResults.NoFlight<List<PageResponse>>(pollingStart);
+        
+        var pages = responseList.Select(x => new PageResponse(x)).ToList();
+        return PollingEventResults.Flight(pages, pollingStart);
     }
     
-    [PollingEvent("On pages updated", "Triggered when pages are updated")]
-    public async Task<PollingEventResponse<DateMemory, PagesResponse>> OnPagesUpdated(
-        PollingEventRequest<DateMemory> request)
+    [MultipleEvents, PollingEvent("On page updated", "Triggered when a page is updated")]
+    public async Task<PollingEventResponse<DateMemory, List<PageResponse>>> OnPageUpdated(
+        PollingEventRequest<DateMemory> pollingRequest)
     {
-        if (request.Memory is null)
-        {
-            return new()
-            {
-                FlyBird = false,
-                Memory = new()
-                {
-                    LastInteractionDate = DateTime.UtcNow
-                }
-            };
-        }
+        var pollingStart = PollingEventResults.PollingStart;
         
-        var pages = await GetPages(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate });
-        pages.Items = pages.Items.Where(x => x.CreationTime != x.UpdateTime).ToList();
+        if (pollingRequest.Memory is null)
+            return PollingEventResults.NoFlight<List<PageResponse>>(pollingStart);
         
-        return new()
-        {
-            FlyBird = pages.Items.Any(),
-            Result = pages,
-            Memory = new()
-            {
-                LastInteractionDate = DateTime.UtcNow
-            }
-        };
-    }
-    
-    private async Task<PagesResponse> GetPages(BaseFilterRequest filter)
-    {
-        var queryString = BuildQueryString(filter);
-        var requestUrl = $"/rest/V1/cmsPage/search?searchCriteria{queryString}";
-        return await Client.ExecuteWithErrorHandling<PagesResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
-    }
-    
-    protected override string BuildQueryString(BaseFilterRequest filterRequest)
-    {
-        var queryString = new StringBuilder();
-        var filterIndex = 0;
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereGreaterThan(("update_time", pollingRequest.Memory.LastInteractionDate))
+            .ApplyTo(new RestRequest("V1/cmsPage/search"));
         
-        if (filterRequest.CreatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("creation_time")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        if (filterRequest.UpdatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("update_time")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        return queryString.ToString();
+        var response = await Client.Paginate<PageEntity>(request);
+        var responseList = response.Where(x => x.UpdateTime > x.CreationTime).ToList();
+        if (responseList.Count == 0)
+            return PollingEventResults.NoFlight<List<PageResponse>>(pollingStart);
+        
+        var pages = responseList.Select(x => new PageResponse(x)).ToList();
+        return PollingEventResults.Flight(pages, pollingStart);
     }
 }

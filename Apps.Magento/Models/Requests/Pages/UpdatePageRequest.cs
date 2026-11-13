@@ -4,33 +4,24 @@ namespace Apps.Magento.Models.Requests.Pages;
 
 public class UpdatePageRequest
 {
-    [Display("Identifier")] 
+    [Display("Page identifier")] 
     public string? Identifier { get; set; } 
 
-    [Display("Title")] 
+    [Display("Page title")] 
     public string? Title { get; set; }
 
-    [Display("Page layout")] 
-    public string? PageLayout { get; set; }
-
-    [Display("Meta title")] 
+    [Display("Page meta title")] 
     public string? MetaTitle { get; set; }
 
-    [Display("Meta keywords")]
+    [Display("Page meta keywords")]
     public string? MetaKeywords { get; set; }
 
-    [Display("Meta description")] 
+    [Display("Page meta description")] 
     public string? MetaDescription { get; set; }
 
-    [Display("Content heading")] 
+    [Display("Page content heading")] 
     public string? ContentHeading { get; set; }
-
-    [Display("Content")] 
-    public string Content { get; set; } = string.Empty;
-
-    [Display("Sort order")] 
-    public string? SortOrder { get; set; } 
     
-    [Display("Active")]
+    [Display("Page is active")]
     public bool? Active { get; set; }
 }

@@ -6,7 +6,7 @@ namespace Apps.Magento.Models.Identifiers;
 
 public class CategoryIdentifier
 {
-    [Display("Category ID", Description = "Unique identifier of the category"), DataSource(typeof(CategoryDataHandler))]
+    [Display("Category ID", Description = "Unique identifier of the category"), DataSource(typeof(CategoryDataSource))]
     public string CategoryId { get; set; } = string.Empty;
     
     public override string ToString()
