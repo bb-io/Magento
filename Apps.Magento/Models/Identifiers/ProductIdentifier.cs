@@ -6,6 +6,6 @@ namespace Apps.Magento.Models.Identifiers;
 
 public class ProductIdentifier
 {
-    [Display("Product SKU", Description = "The unique identifier of product"), DataSource(typeof(ProductDataSource))]
+    [Display("Product SKU"), DataSource(typeof(ProductDataSource))]
     public string Sku { get; set; } = string.Empty;
 }

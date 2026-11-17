@@ -1,29 +1,25 @@
-using Apps.Magento.Utils;
+using Apps.Magento.Models.Entities.Blocks;
 using Blackbird.Applications.Sdk.Common;
-using Newtonsoft.Json;
 
 namespace Apps.Magento.Models.Responses.Blocks;
 
-public class BlockResponse
+public class BlockResponse(BlockEntity entity)
 {
     [Display("Block ID")]
-    public string Id { get; set; } = string.Empty;
-    
-    [Display("Identifier")]
-    public string Identifier { get; set; } = string.Empty;
-    
-    [Display("Title")]
-    public string Title { get; set; } = string.Empty;
-    
-    [Display("Content")]
-    public string Content { get; set; } = string.Empty;
-    
-    [Display("Creation time"), JsonConverter(typeof(CustomDateTimeConverter))]
-    public DateTime CreationTime { get; set; }
-    
-    [Display("Update time"), JsonConverter(typeof(CustomDateTimeConverter))]
-    public DateTime UpdateTime { get; set; }
-    
-    [Display("Active")]
-    public bool Active { get; set; }
+    public string Id { get; set; } = entity.Id;
+
+    [Display("Block identifier")]
+    public string Identifier { get; set; } = entity.Identifier;
+
+    [Display("Block title")]
+    public string Title { get; set; } = entity.Title;
+
+    [Display("Block created at")]
+    public DateTime CreatedAt { get; set; } = entity.CreationTime;
+
+    [Display("Block updated at")]
+    public DateTime UpdatedAt { get; set; } = entity.UpdateTime;
+
+    [Display("Block is active")]
+    public bool Active { get; set; } = entity.Active;
 }

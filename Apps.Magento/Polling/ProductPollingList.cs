@@ -1,157 +1,73 @@
-using System.Text;
-using Apps.Magento.Api;
 using Apps.Magento.Invocables;
-using Apps.Magento.Models.Requests;
+using Apps.Magento.Models.Entities.Products;
+using Apps.Magento.Models.Identifiers.Optional;
 using Apps.Magento.Models.Responses.Products;
 using Apps.Magento.Polling.Models;
 using Apps.Magento.Polling.Models.Requests;
+using Apps.Magento.Utils;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
-using Newtonsoft.Json;
 using RestSharp;
 
 namespace Apps.Magento.Polling;
 
-[PollingEventList]
+[PollingEventList("Products")]
 public class ProductPollingList(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
-    [PollingEvent("On products created", "Triggered when new products are created")]
-    public async Task<PollingEventResponse<DateMemory, ProductsResponse>> OnProductsCreated(
-        PollingEventRequest<DateMemory> request,
-        [PollingEventParameter] OnProductsUpdatedRequest filterRequest)
+    [MultipleEvents, PollingEvent("On product created", "Triggered when a product is created")]
+    public async Task<PollingEventResponse<DateMemory, List<ProductResponse>>> OnProductCreated(
+        PollingEventRequest<DateMemory> pollingRequest,
+        [PollingEventParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [PollingEventParameter] ProductPollingRequest input)
     {
-        if (request.Memory is null)
-        {
-            return new()
-            {
-                FlyBird = false,
-                Memory = new()
-                {
-                    LastInteractionDate = DateTime.UtcNow
-                }
-            };
-        }
+        var pollingStart = PollingEventResults.PollingStart;
         
-        var products = await GetProducts(new BaseFilterRequest
-        {
-            CreatedAt = request.Memory.LastInteractionDate, 
-            Title = filterRequest.Title
-        }, filterRequest.CategoryIds?.ToList());
+        if (pollingRequest.Memory is null)
+            return PollingEventResults.NoFlight<List<ProductResponse>>(pollingStart);
         
-        return new()
-        {
-            FlyBird = products.Items.Any(),
-            Result = products,
-            Memory = new()
-            {
-                LastInteractionDate = DateTime.UtcNow
-            }
-        };
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereContains(("name", input.NameContains))
+            .WhereGreaterThan(("created_at", pollingRequest.Memory.LastInteractionDate))
+            .ApplyTo(new RestRequest($"{storeViewIdentifier}/V1/products"));
+
+        var response = await Client.Paginate<ProductEntity>(request);
+        if (input.CategoryIds != null)
+            response = response.Where(x => x.IsInAllCategories(input.CategoryIds));
+
+        var responseList = response.ToList();
+        if (responseList.Count == 0)
+            return PollingEventResults.NoFlight<List<ProductResponse>>(pollingStart);
+        
+        var products = responseList.Select(x => new ProductResponse(x)).ToList();
+        return PollingEventResults.Flight(products, pollingStart);
     }
     
-    [PollingEvent("On products updated", "Triggered when products are updated")]
-    public async Task<PollingEventResponse<DateMemory, ProductsResponse>> OnProductsUpdated(
-        PollingEventRequest<DateMemory> request,
-        [PollingEventParameter] OnProductsUpdatedRequest filterRequest)
+    [MultipleEvents, PollingEvent("On product updated", "Triggered when a product is updated")]
+    public async Task<PollingEventResponse<DateMemory, List<ProductResponse>>> OnProductUpdated(
+        PollingEventRequest<DateMemory> pollingRequest,
+        [PollingEventParameter] StoreViewOptionalIdentifier storeViewIdentifier,
+        [PollingEventParameter] ProductPollingRequest input)
     {
-        if (request.Memory is null)
-        {
-            return new()
-            {
-                FlyBird = false,
-                Memory = new()
-                {
-                    LastInteractionDate = DateTime.UtcNow
-                }
-            };
-        }
-
-        var products = await GetProducts(new BaseFilterRequest
-        {
-            UpdatedAt = request.Memory.LastInteractionDate, 
-            Title = filterRequest.Title
-        }, filterRequest.CategoryIds?.ToList());
+        var pollingStart = PollingEventResults.PollingStart;
         
-        products.Items = products.Items.Where(x => x.CreatedAt != x.UpdatedAt).ToList();
-            
-        return new()
-        {
-            FlyBird = products.Items.Any(),
-            Result = products,
-            Memory = new()
-            {
-                LastInteractionDate = DateTime.UtcNow
-            }
-        };
-    }
-
-    private async Task<ProductsResponse> GetProducts(BaseFilterRequest request, List<string>? requestedCategoryIds)
-    {
-        var queryString = BuildQueryString(request);
-        var requestUrl = $"/rest/V1/products?searchCriteria{queryString}";
-        var products = await Client.ExecuteWithErrorHandling<ProductsResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
+        if (pollingRequest.Memory is null)
+            return PollingEventResults.NoFlight<List<ProductResponse>>(pollingStart);
         
-        if (requestedCategoryIds != null)
-        {
-            var result = new List<ProductResponse>();
-            foreach (var productResponse in products.Items)
-            {
-                var categoriesCustomAttribute = productResponse.CustomAttributes.FirstOrDefault(x => x.AttributeCode == "category_ids");
-                if (categoriesCustomAttribute != null)
-                {
-                    var categoryIds = JsonConvert.DeserializeObject<List<string>>(categoriesCustomAttribute.Value)!;
-                    if (requestedCategoryIds.All(id => categoryIds.Contains(id)))
-                    {
-                        result.Add(productResponse);
-                    }
-                }
-            }
-            
-            products.Items = result;
-            products.TotalCount = result.Count;
-        }
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereContains(("name", input.NameContains))
+            .WhereGreaterThan(("updated_at", pollingRequest.Memory.LastInteractionDate))
+            .ApplyTo(new RestRequest($"{storeViewIdentifier}/V1/products"));
+
+        var response = await Client.Paginate<ProductEntity>(request);
+        if (input.CategoryIds != null)
+            response = response.Where(x => x.IsInAllCategories(input.CategoryIds));
+
+        var responseList = response.Where(x => x.UpdatedAt > x.CreatedAt).ToList();
+        if (responseList.Count == 0)
+            return PollingEventResults.NoFlight<List<ProductResponse>>(pollingStart);
         
-        return products;
-    }
-    
-    protected override string BuildQueryString(BaseFilterRequest filterRequest)
-    {
-        var queryString = new StringBuilder();
-        var filterIndex = 0;
-
-        if (!string.IsNullOrEmpty(filterRequest.Title))
-        {
-            queryString.Append($"[filterGroups][{filterIndex}][filters][0][field]={Uri.EscapeDataString("name")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][value]={Uri.EscapeDataString($"%{filterRequest.Title}%")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][{filterIndex}][filters][0][conditionType]={Uri.EscapeDataString("like")}");
-
-            filterIndex += 1;
-        }
-        
-        if (filterRequest.CreatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("created_at")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        if (filterRequest.UpdatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("updated_at")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        return queryString.ToString();
+        var products = responseList.Select(x => new ProductResponse(x)).ToList();
+        return PollingEventResults.Flight(products, pollingStart);
     }
 }

@@ -1,110 +1,59 @@
-using System.Text;
-using Apps.Magento.Api;
 using Apps.Magento.Invocables;
-using Apps.Magento.Models.Requests;
+using Apps.Magento.Models.Entities.Blocks;
 using Apps.Magento.Models.Responses.Blocks;
 using Apps.Magento.Polling.Models;
+using Apps.Magento.Utils;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
 using RestSharp;
 
 namespace Apps.Magento.Polling;
 
-[PollingEventList]
+[PollingEventList("Blocks")]
 public class BlockPollingList(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
-    [PollingEvent("On blocks created", "Triggered when new blocks are created")]
-    public async Task<PollingEventResponse<DateMemory, BlocksResponse>> OnBlocksCreated(
-        PollingEventRequest<DateMemory> request)
+    [MultipleEvents, PollingEvent("On block created", "Triggered when a new block is created")]
+    public async Task<PollingEventResponse<DateMemory, List<BlockResponse>>> OnBlockCreated(
+        PollingEventRequest<DateMemory> pollingRequest)
     {
-        if (request.Memory is null)
-        {
-            return new()
-            {
-                FlyBird = false,
-                Memory = new()
-                {
-                    LastInteractionDate = DateTime.UtcNow
-                }
-            };
-        }
+        var pollingStart = PollingEventResults.PollingStart;
         
-        var blocks = await GetBlocks(new BaseFilterRequest { CreatedAt = request.Memory.LastInteractionDate });
-        return new()
-        {
-            FlyBird = blocks.Items.Any(),
-            Result = blocks,
-            Memory = new()
-            {
-                LastInteractionDate = DateTime.UtcNow
-            }
-        };
+        if (pollingRequest.Memory is null)
+            return PollingEventResults.NoFlight<List<BlockResponse>>(pollingStart);
+        
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereGreaterThan(("creation_time", pollingRequest.Memory.LastInteractionDate))
+            .ApplyTo(new RestRequest("V1/cmsBlock/search"));
+        
+        var response = await Client.Paginate<BlockEntity>(request);
+        var responseList = response.ToList();
+        if (responseList.Count == 0)
+            return PollingEventResults.NoFlight<List<BlockResponse>>(pollingStart);
+        
+        var blocks = responseList.Select(x => new BlockResponse(x)).ToList();
+        return PollingEventResults.Flight(blocks, pollingStart);
     }
     
-    [PollingEvent("On blocks updated", "Triggered when blocks are updated")]
-    public async Task<PollingEventResponse<DateMemory, BlocksResponse>> OnBlocksUpdated(
-        PollingEventRequest<DateMemory> request)
+    [MultipleEvents, PollingEvent("On block updated", "Triggered when a block is updated")]
+    public async Task<PollingEventResponse<DateMemory, List<BlockResponse>>> OnBlockUpdated(
+        PollingEventRequest<DateMemory> pollingRequest)
     {
-        if (request.Memory is null)
-        {
-            return new()
-            {
-                FlyBird = false,
-                Memory = new()
-                {
-                    LastInteractionDate = DateTime.UtcNow
-                }
-            };
-        }
+        var pollingStart = PollingEventResults.PollingStart;
         
-        var blocks = await GetBlocks(new BaseFilterRequest { UpdatedAt = request.Memory.LastInteractionDate });
-        blocks.Items = blocks.Items.Where(x => x.CreationTime != x.UpdateTime).ToList();
-
-        return new()
-        {
-            FlyBird = blocks.Items.Any(),
-            Result = blocks,
-            Memory = new()
-            {
-                LastInteractionDate = DateTime.UtcNow
-            }
-        };
-    }
-    
-    private async Task<BlocksResponse> GetBlocks(BaseFilterRequest filter)
-    {
-        var queryString = BuildQueryString(filter);
-        var requestUrl = $"/rest/V1/cmsBlock/search?searchCriteria{queryString}";
-        return await Client.ExecuteWithErrorHandling<BlocksResponse>(new ApiRequest(requestUrl, Method.Get, Creds));
-    }
-    
-    protected override string BuildQueryString(BaseFilterRequest filterRequest)
-    {
-        var queryString = new StringBuilder();
-        var filterIndex = 0;
+        if (pollingRequest.Memory is null)
+            return PollingEventResults.NoFlight<List<BlockResponse>>(pollingStart);
         
-        if (filterRequest.CreatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("creation_time")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        if (filterRequest.UpdatedAt.HasValue)
-        {
-            queryString.Append($"[filterGroups][0][filters][{filterIndex}][field]={Uri.EscapeDataString("update_time")}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][value]={Uri.EscapeDataString(filterRequest.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"))}");
-            queryString.Append(
-                $"&searchCriteria[filterGroups][0][filters][{filterIndex}][conditionType]={Uri.EscapeDataString("gt")}");
-            
-            filterIndex += 1;
-        }
-
-        return queryString.ToString();
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereGreaterThan(("update_time", pollingRequest.Memory.LastInteractionDate))
+            .ApplyTo(new RestRequest("V1/cmsBlock/search"));
+        
+        var response = await Client.Paginate<BlockEntity>(request);
+        var responseList = response.Where(x => x.UpdateTime > x.CreationTime).ToList();
+        if (responseList.Count == 0)
+            return PollingEventResults.NoFlight<List<BlockResponse>>(pollingStart);
+        
+        var blocks = responseList.Select(x => new BlockResponse(x)).ToList();
+        return PollingEventResults.Flight(blocks, pollingStart);
     }
 }

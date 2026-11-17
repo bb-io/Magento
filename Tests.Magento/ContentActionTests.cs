@@ -1,0 +1,66 @@
+using Apps.Magento.Actions;
+using Apps.Magento.Constants;
+using Apps.Magento.Models.Identifiers;
+using Apps.Magento.Models.Identifiers.Optional;
+using Apps.Magento.Models.Requests.Content;
+using Tests.Magento.Base;
+
+namespace Tests.Magento;
+
+[TestClass]
+public class ContentActionTests : TestBase
+{
+    private ContentActions Actions => new(InvocationContext, FileManager);
+
+    [TestMethod]
+    public async Task SearchContent_AllContentTypes_ReturnsContent()
+    {
+        // Arrange
+        var types = new ContentTypesOptionalIdentifier { ContentTypes = [ContentTypeConstants.Page] };
+        var input = new SearchContentRequest
+        {
+            StoreView = "fr"
+        };
+
+        // Act
+        var result = await Actions.SearchContent(types, input);
+
+        // Assert
+        PrintJsonResult(result.Content);
+    }
+
+    [TestMethod]
+    public async Task SearchContent_OneContentType_ReturnsContent()
+    {
+        // Arrange
+        string contentType = ContentTypeConstants.Product;
+        
+        var types = new ContentTypesOptionalIdentifier { ContentTypes = [contentType] };
+        var input = new SearchContentRequest { };
+
+        // Act
+        var result = await Actions.SearchContent(types, input);
+
+        // Assert
+        PrintJsonResult(result.Content);
+        Assert.IsTrue(result.Content.All(x => x.ContentType == contentType));
+    }
+
+    [TestMethod]
+    public async Task DownloadContent_IsSuccess()
+    {
+        // Arrange
+        var contentType = new ContentTypeIdentifier { ContentType = ContentTypeConstants.Block };
+        var input = new DownloadContentRequest
+        {
+            ContentId = "1"
+        };
+        var storeView = new StoreViewOptionalIdentifier { };
+
+        // Act
+        var result = await Actions.DownloadContent(contentType, input, storeView);
+
+        // Assert
+        Console.WriteLine(result.Content.Name);
+    }
+}

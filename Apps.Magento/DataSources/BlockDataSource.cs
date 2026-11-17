@@ -1,35 +1,21 @@
-using Apps.Magento.Actions;
 using Apps.Magento.Invocables;
-using Apps.Magento.Models.Identifiers;
-using Apps.Magento.Models.Requests.Blocks;
-using Apps.Magento.Models.Responses.Blocks;
+using Apps.Magento.Models.Entities.Blocks;
+using Apps.Magento.Utils;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using RestSharp;
 
 namespace Apps.Magento.DataSources;
 
-public class BlockDataSource(InvocationContext invocationContext) : AppInvocable(invocationContext), IAsyncDataSourceHandler
+public class BlockDataSource(InvocationContext invocationContext) : AppInvocable(invocationContext), IAsyncDataSourceItemHandler
 {
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var actions = new BlockActions(InvocationContext, null!);
-        var pages = await actions.GetAllBlocksAsync(new FilterBlockRequest
-        {
-            Title = context.SearchString
-        });
+        RestRequest request = new SearchCriteriaBuilder()
+            .WhereContains(("title", context.SearchString))
+            .ApplyTo(new RestRequest("V1/cmsBlock/search"));
         
-        return pages.Items
-            .ToDictionary(x => x.Id, x => GetBlockName(x, pages.Items));
-    }
-    
-    private string GetBlockName(BlockResponse blockResponse, List<BlockResponse> blocks)
-    {
-        var blockWithSameName = blocks.FirstOrDefault(x => x.Title == blockResponse.Title && x.Id != blockResponse.Id);
-        if (blockWithSameName == null)
-        {
-            return blockResponse.Title;
-        }
-        
-        return $"{blockResponse.Title} ({blockResponse.Identifier})";
+        var response = await Client.Paginate<BlockEntity>(request, maxPages: 1);
+        return response.Select(x => new DataSourceItem(x.Id, x.Title)).ToList();
     }
 }

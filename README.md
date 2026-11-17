@@ -49,55 +49,74 @@ Adobe Commerce is the leading platform for open commerce innovation. It’s desi
 
 ## Actions
 
+### Content
+
+- **Search content** - Search items of supported content types by specific criteria.
+- **Download content** - Download content of a specific content item.
+- **Upload content** - Upload content.
+
 ### Blocks
 
-- **Search blocks** - Retrieve all blocks that match the specified search criteria.
+- **Search blocks** - Search blocks by specific criteria.
 - **Get block** - Get block by specified ID.
-- **Get block as HTML** - Get block by specified ID as HTML.
-- **Create block** - Create block with specified data.
+- **Download block** - Download block content.
+- **Create block** - Create a new block.
 - **Update block** - Update block with specified data.
-- **Update block from HTML** - Update block with specified ID from HTML. This action is useful in pair with the `Get block as HTML` action when you need to get the block content as HTML and then translate the document.
+- **Upload block** - Upload content of a specific block.
 - **Delete block** - Delete block by specified ID.
 
 ### Pages
 
-- **Search pages** - Retrieve all pages that match the specified search criteria.
+- **Search pages** - Search pages by specific criteria.
 - **Get page** - Get page by specified ID.
-- **Get page as HTML** - Get page by specified ID as HTML.
-- **Create page** - Create page with specified data.
-- **Update page** - Update page with specified data.
-- **Update page from HTML** - Update page with specified ID from HTML. This action is useful in pair with the `Get page as HTML` action when you need to get the page content as HTML and then translate the document.
+- **Download page** - Download page content.
+- **Create page** - Create a new page.
+- **Update page** - Update page by specified ID.
+- **Upload page** - Upload page content.
 - **Delete page** - Delete page by specified ID.
 
 ### Products
 
-- **Search products** - Retrieve all products that match the specified search criteria.
+- **Search products** - Search products by specific criteria.
 - **Get product** - Get product by specified SKU.
-- **Get product as HTML** - Get product by specified SKU as HTML. Using optional parameters you can specify `Custom attributes` that you want to include in the HTML.
-- **Create product** - Create product with specified data.
-- **Update product** - Update product with specified data.
-- **Update product from HTML** - Update product with specified SKU from HTML. This action is useful in pair with the `Get product as HTML` action when you need to get the product content as HTML and then translate the document.
+- **Download product** - Download product content.
+- **Create product** - Create a new product.
+- **Update product** - Update product by specified SKU.
+- **Upload product** - Upload content of a specific product.
 - **Delete product** - Delete product by specified SKU.
-- **Add custom attribute** - Allows you to add a custom attribute to a specific product.
-
-> Most actions also have an optional store view input. You can use this to determine in which store view an action should be executed.
+- **Add custom attribute** - Add custom attribute to product by specified SKU.
 
 ### Categories
 
-- **Get all categories** - Get all categories.
-- **Get category** - Get category by specified ID.
-- **Get categories for product** - Get categories for product by specified SKU.
+- **Search categories** - Search categories by specific criteria.
+- **Get category** - Get category by ID.
+
+### Store views
+
+- **Search store views** - Search store views by specific criteria.
+- **Get store view** - Get store view by its code.
+- **Create store view** - Create a new store view. Requires the Blackbird Store Provisioning extension to be installed on the Magento instance
 
 ## Events
 
-- **On products created** - Triggered when new products are created.
-- **On products updated** - Triggered when products are updated.
-- **On blocks created** - Triggered when new blocks are created.
-- **On blocks updated** - Triggered when blocks are updated.
-- **On pages created** - Triggered when new pages are created.
-- **On pages updated** - Triggered when pages are updated.
+### Content
 
-> Events are based on a polling mechanism and are triggered periodically. The interval can be set in the bird editor. The interval should be between 5 minutes and 7 days.
+- **On content created or updated** - Triggered when a content item is created or updated.
+
+### Blocks
+
+- **On block created** - Triggered when a new block is created.
+- **On block updated** - Triggered when a block is updated.
+
+### Pages
+
+- **On page created** - Triggered when a new page is created.
+- **On page updated** - Triggered when a page is updated.
+
+### Products
+
+- **On product created** - Triggered when a product is created.
+- **On product updated** - Triggered when a product is updated.
 
 ## Example
 
